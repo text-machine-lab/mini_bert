@@ -1,0 +1,9 @@
+torch >= 1.3
+datasets >= 1.8.0
+tokenizers
+wandb
+transformers
+matplotlib
+sacrebleu
+sklearn
+

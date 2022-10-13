@@ -1,0 +1,4 @@
+trained_models/
+*.gz
+*.egg-info/
+wandb/
