@@ -1,5 +1,4 @@
-
-#!/usr/bin/env python
+# !/usr/bin/env python
 # coding=utf-8
 # Copyright 2021 The HuggingFace Inc. team. All rights reserved.
 #
@@ -23,6 +22,7 @@ https://huggingface.co/models?filter=text-generation
 # You can also adapt this script on your own causal language modeling task. Pointers for this are left as comments.
 
 import argparse
+import json
 import logging
 
 import datasets
@@ -52,7 +52,8 @@ def parse_args():
     parser.add_argument("--vocab_size", type=int, required=True, help="Size of the vocabulary")
     parser.add_argument("--load_dir", type=str, required=True, help="Directory which has raw data.")
     parser.add_argument("--save_dir", type=str, required=True, help="Directory which will be used to save tokenizer.")
-
+    parser.add_argument("--pre_process_dataset", action='store_true', required=True,
+                        help="whether to preprocess dataset or not. If set to true, will preprocess and resave the dataset.")
     args = parser.parse_args()
 
     return args
@@ -63,9 +64,19 @@ def main():
     logger.info(f"Starting tokenizer training with args {args}")
 
     logger.info(f"Loading  dataset")
-    #raw_datasets = load_dataset(args.load_dir)
-    raw_datasets = load_dataset('json', args.load_dir)
-
+    # raw_datasets = load_dataset(args.load_dir)
+    # we need following special tokens
+    tokens_special = ['<s>', '</s>', '<mask>', '<pad>', '<unk>'] + [f'<extra_id_{i}>' for i in range(0, 100)]
+    iterator = []
+    if args.pre_process_datatset:
+        with open(args.load_dir, 'r') as f:
+            data = json.load(f)
+        for i, k in enumerate(data.keys()):
+            iterator.append(data[k]['TEXT'])
+        # iterator = (data[k]['TEXT'] for i, k in enumerate(data))
+    else:
+        raw_datasets = load_dataset('json', args.load_dir)
+        iterator = (item["text"] for item in raw_datasets)
     logger.info(f"Building tokenizer (might take a couple of minutes)")
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
@@ -81,11 +92,9 @@ def main():
     # YOUR CODE STARTS HERE (our implementation is about 6 lines)
 
     tokenizer = Tokenizer(BPE(unk_token="[UNK]", ))
-    tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,  special_tokens=["[UNK]", "[PAD]"])
-    tokenizer.pre_tokenizer =  Whitespace()
+    tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size, special_tokens=tokens_special)
+    tokenizer.pre_tokenizer = Whitespace()
 
-    #iterator = (item["text"] for item in raw_datasets["train"])
-    iterator = (item["text"] for item in raw_datasets)
     tokenizer.train_from_iterator(iterator, trainer=tokenizer_trainer)
     # YOUR CODE ENDS HERE
 
@@ -95,5 +104,5 @@ def main():
     tokenizer.save_pretrained(args.save_dir)
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
     main()
