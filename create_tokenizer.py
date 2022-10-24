@@ -68,7 +68,7 @@ def main():
     # we need following special tokens
     tokens_special = ['<s>', '</s>', '<mask>', '<pad>', '<unk>'] + [f'<extra_id_{i}>' for i in range(0, 100)]
     iterator = []
-    if args.pre_process_datatset:
+    if args.pre_process_dataset:
         with open(args.load_dir, 'r') as f:
             data = json.load(f)
         for i, k in enumerate(data.keys()):
