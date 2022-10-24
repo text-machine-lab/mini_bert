@@ -62,10 +62,9 @@ def main():
     args = parse_args()
     logger.info(f"Starting tokenizer training with args {args}")
 
-    # Use Datsets to load wikitext corpus. This is a very relatively dataset, less than 1Gb.
-    # wikitext-103-v1 is a particular version of this dataset, you can look for other versions here: https://huggingface.co/datasets/wikitext
-    logger.info(f"Loading wikitext dataset")
-    raw_datasets = load_dataset(args.load_dir)
+    logger.info(f"Loading  dataset")
+    #raw_datasets = load_dataset(args.load_dir)
+    raw_datasets = load_dataset('json', args.load_dir)
 
     logger.info(f"Building tokenizer (might take a couple of minutes)")
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
@@ -85,7 +84,8 @@ def main():
     tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,  special_tokens=["[UNK]", "[PAD]"])
     tokenizer.pre_tokenizer =  Whitespace()
 
-    iterator = (item["text"] for item in raw_datasets["train"])
+    #iterator = (item["text"] for item in raw_datasets["train"])
+    iterator = (item["text"] for item in raw_datasets)
     tokenizer.train_from_iterator(iterator, trainer=tokenizer_trainer)
     # YOUR CODE ENDS HERE
 
