@@ -88,7 +88,7 @@ def parse_args():
     parser.add_argument(
         "--model_name",
         type=str,
-        default="Salesforce/codet5-base-multi-sum",
+        default="mollypak/bert-model-baby",
         help="The name of model to be loaded. We will only take the model config.",
     )
 
@@ -267,13 +267,20 @@ def preprocess_function(
 
     model_inputs = tokenizer(inputs, max_length=max_seq_length, truncation=True)
     model_inputs['labels'] = model_inputs.input_ids.detach().clone()
-    rand = torch.rand(inputs.input_ids.shape)
+
+    if debug:
+        print(f"model_inputs {model_inputs}")
+    rand = torch.rand(model_inputs.input_ids.shape)
     # where the random array is less than 0.15, we set true
     # TODO replace 101 with special token reference from tokenizer
-    mask_arr = (rand < masked_percent) * (inputs.input_ids != 101) * (inputs.input_ids != 102)
+    mask_arr = (rand < masked_percent) * (model_inputs.input_ids != 101) * (model_inputs.input_ids != 102)
     selection = torch.flatten((mask_arr[0]).nonzero()).tolist()
-    inputs.input_ids[0, selection] = 103
+    model_inputs.input_ids[0, selection] = 103
+    if keep_original:
+        model_inputs["original_code"] = inputs
 
+    if debug:
+        print(f"model_inputs {model_inputs}")
     return model_inputs
 
 
@@ -319,7 +326,6 @@ def evaluate_model(
 ):
     n_generated_tokens = 0
     model.eval()
-    stop_count = 500
 
     for batch in tqdm(dataloader, desc="Evaluation"):
         with torch.inference_mode():
@@ -354,9 +360,6 @@ def evaluate_model(
                 )
                 bleu.add_batch(predictions=decoded_preds, references=decoded_labels)
 
-        if stop_count < 1:
-            break
-        stop_count -= 1
     model.train()
     eval_metric = bleu.compute()
     evaluation_results = {
