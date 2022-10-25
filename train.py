@@ -275,7 +275,7 @@ def preprocess_function(
 
     if debug:
         print(f"model_inputs {model_inputs}")
-    rand = torch.rand(model_inputs.input_ids.shape)
+
     # where the random array is less than 0.15, we set true
     # TODO replace 101 with special token reference from tokenizer
     mask_arr = (rand < masked_percent) * (model_inputs.input_ids != 101) * (model_inputs.input_ids != 102)
