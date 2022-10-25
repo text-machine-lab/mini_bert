@@ -265,8 +265,11 @@ def preprocess_function(
         :param use_ast:
     """
     inputs = examples["TEXT"]
-
+    if debug:
+        print(inputs)
     model_inputs = tokenizer(inputs, max_length=max_seq_length, truncation=True)
+    if debug:
+        print(model_inputs)
     model_inputs['labels'] = model_inputs.input_ids.detach().clone()
 
     if debug:
