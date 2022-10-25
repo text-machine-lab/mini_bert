@@ -267,6 +267,10 @@ def preprocess_function(
         :param examples:
         :param use_ast:
     """
+    if debug:
+        print(examples)
+        print(type(examples))
+
     inputs = examples["TEXT"]
     if debug:
         print(inputs)
