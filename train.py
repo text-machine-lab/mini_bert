@@ -268,15 +268,8 @@ def preprocess_function(
         :param use_ast:
     """
     inputs = examples["TEXT"]
-    if debug:
-        print(inputs)
     model_inputs = tokenizer(inputs, max_length=max_seq_length, padding=True, truncation=True, return_tensors='pt')
-    if debug:
-        print(model_inputs)
     model_inputs['labels'] = model_inputs.input_ids.detach().clone()
-
-    if debug:
-        print(f"model_inputs {model_inputs}")
 
     rand_mask = torch.rand(model_inputs.labels.shape)
     # where the random array is less than 0.15, we set true
