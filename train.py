@@ -12,8 +12,7 @@ import torch
 
 import transformers
 import datasets
-from datasets import load_dataset, Value, Features
-import logging
+from datasets import load_dataset
 from tqdm.auto import tqdm
 import wandb
 import utils
@@ -387,11 +386,7 @@ def main():
     # TODO make sure data has train and validation sets.
     # with open(args.dataset_path) as f:
     #    data_list = json.load(f)
-    features = Features(
-        {'TEXT': Value(dtype='string'), 'DATA_SOURCE': Value(dtype='string'), 'SENTENCE_LENGTH': Value(dtype='int32'),
-         'TOTAL_AGE': Value(dtype='float32'), 'AVG_AGE': Value(dtype='float32'), 'OOV_COUNT': Value(dtype='int32'),
-         'OOV_WORDS': Value(dtype='string')})
-    raw_datasets = load_dataset("json", data_files=[args.dataset_path], features=features)
+    raw_datasets = load_dataset("json", data_files=[args.dataset_path])
     # print(f"dataset keys {raw_datasets.keys()}")
     if args.debug:
         raw_datasets = utils.sample_small_debug_dataset(
