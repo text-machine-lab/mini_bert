@@ -389,7 +389,7 @@ def main():
     #    data_list = json.load(f)
     features = Features(
         {'TEXT': Value(dtype='string'), 'DATA_SOURCE': Value(dtype='string'), 'SENTENCE_LENGTH': Value(dtype='int32'),
-         'TOTAL_AGE': Value(dtype='float32'), 'AVG_AGE': Value(dtype='float32'), 'OOV_COUNT': Value(dtype='num'),
+         'TOTAL_AGE': Value(dtype='float32'), 'AVG_AGE': Value(dtype='float32'), 'OOV_COUNT': Value(dtype='int32'),
          'OOV_WORDS': Value(dtype='string')})
     raw_datasets = load_dataset("json", data_files=[args.dataset_path], features=features)
     # print(f"dataset keys {raw_datasets.keys()}")
