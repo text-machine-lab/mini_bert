@@ -282,8 +282,6 @@ def preprocess_function(
     if keep_original:
         model_inputs["original_code"] = inputs
 
-    if debug:
-        print(f"model_inputs {model_inputs}")
     return model_inputs
 
 
