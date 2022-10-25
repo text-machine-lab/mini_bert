@@ -40,8 +40,7 @@ def sample_small_debug_dataset(raw_datasets):
 
 
 def sample_small_debug_dataset(raw_datasets, sample_size):
-    random_indices = random.sample(list(range(len(raw_datasets["train"]))), sample_size)
-    subset = raw_datasets["train"].select(random_indices)
+    subset = random.sample(raw_datasets["train"], sample_size)
     raw_datasets["train"] = deepcopy(subset)
     if "validation" in raw_datasets:
         raw_datasets["validation"] = deepcopy(subset)
