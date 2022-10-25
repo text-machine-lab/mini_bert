@@ -12,12 +12,13 @@ import torch
 
 import transformers
 import datasets
-from datasets import load_dataset, Value
+from datasets import load_dataset, Value, Features
 import logging
 from tqdm.auto import tqdm
 import wandb
 import utils
 import json
+
 tokenizer = None
 
 logger = logging.getLogger(__file__)
@@ -384,10 +385,13 @@ def main():
 
     # read in data
     # TODO make sure data has train and validation sets.
-   # with open(args.dataset_path) as f:
+    # with open(args.dataset_path) as f:
     #    data_list = json.load(f)
-
-    raw_datasets = load_dataset("json", data_files=[args.dataset_path])#, features=({'TEXT': Value(dtype='string'), 'DATA_SOURCE': Value(dtype='string'), 'SENTENCE_LENGTH': Value(dtype='string'), 'TOTAL_AGE': Value(dtype='string'), 'AVG_AGE': Value(dtype='string'), 'OOV_COUNT': Value(dtype='string'), 'OOV_WORDS': Value(dtype='string')}))
+    features = Features(
+        {'TEXT': Value(dtype='string'), 'DATA_SOURCE': Value(dtype='string'), 'SENTENCE_LENGTH': Value(dtype='string'),
+         'TOTAL_AGE': Value(dtype='string'), 'AVG_AGE': Value(dtype='string'), 'OOV_COUNT': Value(dtype='string'),
+         'OOV_WORDS': Value(dtype='string')})
+    raw_datasets = load_dataset("json", data_files=[args.dataset_path], features=features)
     # print(f"dataset keys {raw_datasets.keys()}")
     if args.debug:
         raw_datasets = utils.sample_small_debug_dataset(
@@ -485,7 +489,7 @@ def main():
     if args.restart:
         model = AutoModelForSeq2SeqLM.from_pretrained(args.output_dir)
     else:
-        #TODO get model only from config. rest weights.
+        # TODO get model only from config. rest weights.
         model = AutoModelForSeq2SeqLM.from_pretrained(args.model_name)
     optimizer = torch.optim.AdamW(
         params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay
