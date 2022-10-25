@@ -1,3 +1,4 @@
+import copy
 import math
 
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BertTokenizer
@@ -270,7 +271,7 @@ def preprocess_function(
     model_inputs = tokenizer(inputs, max_length=max_seq_length, truncation=True)
     if debug:
         print(model_inputs)
-    model_inputs['labels'] = model_inputs.input_ids.deepcopy()
+    model_inputs['labels'] = copy.deepcopy(model_inputs.input_ids)
 
     if debug:
         print(f"model_inputs {model_inputs}")
