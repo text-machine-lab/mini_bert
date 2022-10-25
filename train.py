@@ -1,6 +1,8 @@
 import copy
 import math
 
+import numpy
+from torch import rand
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BertTokenizer
 
 import random
@@ -271,14 +273,15 @@ def preprocess_function(
     model_inputs = tokenizer(inputs, max_length=max_seq_length, truncation=True)
     if debug:
         print(model_inputs)
-    model_inputs['labels'] = copy.deepcopy(model_inputs.input_ids)
+    model_inputs['labels'] = numpy.array(model_inputs.input_ids).copy()
 
     if debug:
         print(f"model_inputs {model_inputs}")
 
+    rand_mask = torch.rand(model_inputs.labels.shape)
     # where the random array is less than 0.15, we set true
     # TODO replace 101 with special token reference from tokenizer
-    mask_arr = (rand < masked_percent) * (model_inputs.input_ids != 101) * (model_inputs.input_ids != 102)
+    mask_arr = (rand_mask < masked_percent) * (model_inputs.input_ids != 101) * (model_inputs.input_ids != 102)
     selection = torch.flatten((mask_arr[0]).nonzero()).tolist()
     model_inputs.input_ids[0, selection] = 103
     if keep_original:
