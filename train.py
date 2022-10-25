@@ -270,7 +270,7 @@ def preprocess_function(
     inputs = examples["TEXT"]
     if debug:
         print(inputs)
-    model_inputs = tokenizer(inputs, max_length=max_seq_length, truncation=True, return_tensors='pt')
+    model_inputs = tokenizer(inputs, max_length=max_seq_length, padding=True, truncation=True, return_tensors='pt')
     if debug:
         print(model_inputs)
     model_inputs['labels'] = model_inputs.input_ids.detach().clone()
@@ -391,7 +391,7 @@ def main():
 
     tokenizer = AutoTokenizer.from_pretrained(
         args.tokenizer_path) if args.tokenizer_path else BertTokenizer.from_pretrained('bert-base-uncased')
-
+    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
     # read in data
     # TODO make sure data has train and validation sets.
     # with open(args.dataset_path) as f:
@@ -407,7 +407,7 @@ def main():
     # First we tokenize all the texts.
     column_names = raw_datasets["train"].column_names
     print(f"Data column_names{column_names}")
-
+    print(f"raw datatset keys {raw_datasets.keys()}")
     preprocess_function_wrapped = partial(
         preprocess_function,
         max_seq_length=args.max_seq_length,
