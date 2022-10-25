@@ -387,7 +387,7 @@ def main():
     # TODO make sure data has train and validation sets.
     # with open(args.dataset_path) as f:
     #    data_list = json.load(f)
-    raw_datasets = load_dataset("json", data_files=[args.dataset_path])
+    raw_datasets = load_dataset("json", data_files=[args.dataset_path], split=["train", "validation", "test"])
     # print(f"dataset keys {raw_datasets.keys()}")
     if args.debug:
         raw_datasets = utils.sample_small_debug_dataset(
@@ -398,7 +398,7 @@ def main():
     # First we tokenize all the texts.
     column_names = raw_datasets["train"].column_names
     print(f"Data column_names{column_names}")
-    print(f"raw datatset keys {raw_datasets.keys()}")
+    print(f"raw dataset keys {raw_datasets.keys()}")
     preprocess_function_wrapped = partial(
         preprocess_function,
         max_seq_length=args.max_seq_length,
