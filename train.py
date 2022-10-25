@@ -267,17 +267,13 @@ def preprocess_function(
         :param examples:
         :param use_ast:
     """
-    if debug:
-        print(examples)
-        print(type(examples))
-
     inputs = examples["TEXT"]
     if debug:
         print(inputs)
-    model_inputs = tokenizer(inputs, max_length=max_seq_length, truncation=True)
+    model_inputs = tokenizer(inputs, max_length=max_seq_length, truncation=True, return_tensors='pt')
     if debug:
         print(model_inputs)
-    model_inputs['labels'] = numpy.array(model_inputs.input_ids).copy()
+    model_inputs['labels'] = model_inputs.input_ids.detach().clone()
 
     if debug:
         print(f"model_inputs {model_inputs}")
@@ -286,6 +282,8 @@ def preprocess_function(
     # where the random array is less than 0.15, we set true
     # TODO replace 101 with special token reference from tokenizer
     mask_arr = (rand_mask < masked_percent) * (model_inputs.input_ids != 101) * (model_inputs.input_ids != 102)
+    print(mask_arr)
+
     selection = torch.flatten((mask_arr[0]).nonzero()).tolist()
     model_inputs.input_ids[0, selection] = 103
     if keep_original:
