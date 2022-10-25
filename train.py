@@ -270,7 +270,7 @@ def preprocess_function(
     model_inputs = tokenizer(inputs, max_length=max_seq_length, truncation=True)
     if debug:
         print(model_inputs)
-    model_inputs['labels'] = model_inputs.input_ids.detach().clone()
+    model_inputs['labels'] = model_inputs.input_ids.clone()
 
     if debug:
         print(f"model_inputs {model_inputs}")
