@@ -17,7 +17,7 @@ import logging
 from tqdm.auto import tqdm
 import wandb
 import utils
-
+import json
 tokenizer = None
 
 logger = logging.getLogger(__file__)
@@ -384,7 +384,8 @@ def main():
 
     # read in data
     # TODO make sure data has train and validation sets.
-    raw_datasets = load_dataset(args.dataset_path)
+    with open(args.dataset_path) as f:
+        raw_datasets = json.load(f)
     # print(f"dataset keys {raw_datasets.keys()}")
     if args.debug:
         raw_datasets = utils.sample_small_debug_dataset(
