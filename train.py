@@ -15,7 +15,7 @@ import torch
 
 import transformers
 import datasets
-from datasets import load_dataset
+from datasets import load_from_disk
 import logging
 from tqdm.auto import tqdm
 import wandb
@@ -387,7 +387,7 @@ def main():
     # TODO make sure data has train and validation sets.
     # with open(args.dataset_path) as f:
     #    data_list = json.load(f)
-    raw_datasets = load_dataset("json", data_files=[args.dataset_path], split=["train", "validation", "test"])
+    raw_datasets = load_from_disk(args.dataset_path)
     # print(f"dataset keys {raw_datasets.keys()}")
     if args.debug:
         raw_datasets = utils.sample_small_debug_dataset(
@@ -427,6 +427,7 @@ def main():
 
     preprocess_function_wrapped_eval = partial(
         preprocess_function,
+        max_seq_length=args.max_seq_length,
         masked_percent=args.masked_percent,
         tokenizer=tokenizer,
         debug=args.debug,
