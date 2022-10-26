@@ -3,7 +3,7 @@ import math
 
 import numpy
 from torch import rand
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BertTokenizer
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BertTokenizer, RobertaForMaskedLM
 
 import random
 
@@ -486,9 +486,9 @@ def main():
     if args.restart:
         model = AutoModelForSeq2SeqLM.from_pretrained(args.output_dir)
     else:
-        with open('config.json') as f:
-            config = transformers.PretrainedConfig.from_dict(json.load(f))
-            model = AutoModelForSeq2SeqLM.from_config(config)
+        model = RobertaForMaskedLM.from_pretrained('saved_models/BabyBERTa_AO-CHILDES')
+        config = model.config
+        model = AutoModelForSeq2SeqLM.from_config(config)
     optimizer = torch.optim.AdamW(
         params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay
     )
