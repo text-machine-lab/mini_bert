@@ -486,9 +486,9 @@ def main():
     if args.restart:
         model = AutoModelForSeq2SeqLM.from_pretrained(args.output_dir)
     else:
-        model = RobertaForMaskedLM.from_pretrained('saved_models/BabyBERTa_AO-CHILDES')
-        config = model.config
-        model = AutoModelForSeq2SeqLM.from_config(config)
+        #model = RobertaForMaskedLM.from_pretrained('https://github.com/phueb/BabyBERTa/tree/master/saved_models/BabyBERTa_AO-CHILDES')
+        config = transformers.RobertaConfig.from_json_file('config.json')
+        model = transformers.AutoModelForSequenceClassification.from_config(config)#RobertaForMaskedLM.from_config(config)
     optimizer = torch.optim.AdamW(
         params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay
     )
