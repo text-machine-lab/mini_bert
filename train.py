@@ -486,10 +486,9 @@ def main():
     if args.restart:
         model = AutoModelForSeq2SeqLM.from_pretrained(args.output_dir)
     else:
-        # TODO get model only from config. rest weights.
-        model = AutoModelForSeq2SeqLM.from_pretrained(args.model_name)
-        config = model.config
-        model = AutoModelForSeq2SeqLM.from_config(config)
+        with open('config.json') as f:
+            config = json.load(f)
+            model = AutoModelForSeq2SeqLM.from_config(config)
     optimizer = torch.optim.AdamW(
         params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay
     )
