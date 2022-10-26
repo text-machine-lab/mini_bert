@@ -573,7 +573,7 @@ def main():
                 ) = evaluate_model(
                     model=model,
                     dataloader=eval_dataloader,
-                    target_tokenizer=tokenizer,
+                    tokenizer=tokenizer,
                     device=args.device,
                     max_seq_length=args.max_seq_length,
                     beam_size=args.beam_size,
