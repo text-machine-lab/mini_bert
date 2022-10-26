@@ -275,12 +275,11 @@ def preprocess_function(
     # where the random array is less than 0.15, we set true
     # TODO replace 101 with special token reference from tokenizer
     mask_arr = (rand_mask < masked_percent) * (model_inputs.input_ids != 101) * (model_inputs.input_ids != 102)
-    print(mask_arr)
-
     selection = torch.flatten((mask_arr[0]).nonzero()).tolist()
     model_inputs.input_ids[0, selection] = 103
     if keep_original:
         model_inputs["original_code"] = inputs
+    #print(f"input size {model_inputs['input_ids'].shape}  label shape {model_inputs['labels'].shape}")
 
     return model_inputs
 
@@ -486,9 +485,9 @@ def main():
     if args.restart:
         model = AutoModelForSeq2SeqLM.from_pretrained(args.output_dir)
     else:
-        #model = RobertaForMaskedLM.from_pretrained('https://github.com/phueb/BabyBERTa/tree/master/saved_models/BabyBERTa_AO-CHILDES')
-        config = transformers.RobertaConfig.from_json_file('config.json')
-        model = transformers.AutoModelForSequenceClassification.from_config(config)#RobertaForMaskedLM.from_config(config)
+        model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
+        #config = transformers.RobertaConfig.from_json_file('config.json')
+        #model = transformers.AutoModel.from_config(config)#RobertaForMaskedLM.from_config(config)
     optimizer = torch.optim.AdamW(
         params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay
     )
@@ -536,6 +535,7 @@ def main():
             input_ids = batch["input_ids"].to(device)
             labels = batch["labels"].to(device)
             # ipdb.set_trace()
+            #print(f"input size {input_ids.shape}  label shape {labels.shape}")
             loss = model(input_ids=input_ids, labels=labels).loss
 
             loss.backward()
