@@ -487,7 +487,7 @@ def main():
         model = AutoModelForSeq2SeqLM.from_pretrained(args.output_dir)
     else:
         with open('config.json') as f:
-            config = json.load(f)
+            config = transformers.PretrainedConfig.from_dict(json.load(f))
             model = AutoModelForSeq2SeqLM.from_config(config)
     optimizer = torch.optim.AdamW(
         params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay
