@@ -31,11 +31,6 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
-# To compute BLEU we will use Huggingface Datasets implementation of it
-# Sacrebleu is a flavor of BLEU that standardizes some of the BLEU parameters.
-bleu = datasets.load_metric("sacrebleu")
-
-
 def parse_args():
     """This function creates argument parser and parses the scrip input arguments.
     This is the most common way to define input arguments in python.
@@ -511,20 +506,15 @@ def main():
     progress_bar = tqdm(range(args.max_train_steps))
     global_step = 0
     model.to(device)
-    early_stopping = 5
-    evals_without_improvement = 0
-
-    best_metric = 0
-    stop_training = False
 
     # Training loop
     for epoch in range(args.num_train_epochs):
         model.train()  # make sure that model is in training mode, e.g. dropout is enabled
-        if global_step >= args.max_train_steps or stop_training:
+        if global_step >= args.max_train_steps:
             break
         # iterate over batches
         for batch in train_dataloader:
-            if global_step >= args.max_train_steps or stop_training:
+            if global_step >= args.max_train_steps:
                 break
 
             input_ids = batch["input_ids"].to(device)
@@ -561,60 +551,44 @@ def main():
                     or global_step == args.max_train_steps
             ):
                 (
-                    eval_results,
-                    last_input_ids,
-                    last_decoded_preds,
-                    last_decoded_labels,
+                    eval_loss,
+                    perplexity,
+                    accuracy,
                 ) = evaluate(
                     model=model,
-                    dataloader=eval_dataloader,
+                    eval_dataloader=eval_dataloader,
                     device=args.device,
                 )
 
                 wandb.log(
                     {
-                        "eval/bleu": eval_results["bleu"],
-                        "eval/generation_length": eval_results["generation_length"],
+                        "eval/loss": eval_loss,
+                        "eval/perplexity": perplexity,
+                        "eval/accuracy": accuracy,
                     },
                     step=global_step,
                 )
-                logger.info("Generation example:")
-                random_index = random.randint(0, len(last_input_ids) - 1)
-                logger.info(
-                    f"Input sentence: {tokenizer.decode(last_input_ids[random_index], skip_special_tokens=True)}"
-                )
-                logger.info(f"Generated sentence: {last_decoded_preds[random_index]}")
-                logger.info(
-                    f"Reference sentence: {last_decoded_labels[random_index][0]}"
-                )
+                if global_step >= args.max_train_steps:
+                    break
+
+                if global_step % args.eval_every_steps == 0:
+                    metrics = evaluate(model, eval_dataloader, args.device)
+                    wandb.log(metrics, step=global_step)
 
                 logger.info("Saving model checkpoint to %s", args.output_dir)
                 model.save_pretrained(args.output_dir)
 
-                if stop_training:
-                    break
-                # evaluation
-
-                if eval_results["bleu"] > best_metric:
-                    best_metric = eval_results["bleu"]
-                    evals_without_improvement = 0
-                else:
-                    evals_without_improvement += 1
-
-                if evals_without_improvement > early_stopping:
-                    stop_training = True
-
-    ###############################################################################
-    # Part 8: Save the model
-    ###############################################################################
+    logger.info("Final evaluation")
+    metrics = evaluate(model, eval_dataloader, args.device)
+    wandb.log(metrics, step=global_step)
 
     logger.info("Saving final model checkpoint to %s", args.output_dir)
     model.save_pretrained(args.output_dir)
 
     logger.info("Uploading tokenizer, model and config to wandb")
-    # wandb.save(os.path.join(args.output_dir, "*"))
+    wandb.save(os.path.join(args.output_dir, "*"))
 
-    logger.info(f"Script finished successfully, model saved in {args.output_dir}")
+    logger.info(f"Script finished succesfully, model saved in {args.output_dir}")
 
 
 if __name__ == "__main__":
