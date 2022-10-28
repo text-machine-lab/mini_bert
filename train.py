@@ -240,7 +240,7 @@ def parse_args():
     )
     parser.add_argument(
         "--wandb_project",
-        default="program_synth",
+        default="mini_bert",
         help="wandb project name to log metrics to",
     )
 
@@ -314,59 +314,53 @@ def collation_function_for_seq2seq(batch, pad_token_id, keep_original):
     return collated_batch
 
 
-def evaluate_model(
-        model,
-        dataloader,
-        *,
-        tokenizer,
-        device,
-        max_seq_length,
-        beam_size,
-        keep_original,
-):
-    n_generated_tokens = 0
+def evaluate(model, eval_dataloader, device):
+    # turn on evlauation mode: no dropout
     model.eval()
-
-    for batch in tqdm(dataloader, desc="Evaluation"):
-        with torch.inference_mode():
+    n_correct = 0
+    n_examples = 0
+    total_eval_loss = torch.tensor(0.0, device=device)
+    for batch in tqdm(eval_dataloader, desc="Evaluating"):
+        with torch.no_grad():
+            # Task 4.5: Evaluation step
+            # 1. Compute the loss, just like in the training step
+            # 2. Do not compute gradients, instead add the loss to the total_eval_loss
+            # 3. Compute the number of correct predictions, and add it to n_correct, convert it to a python int
+            # You can do it like this: (torch.argmax(logits, dim=-1) == labels).sum().item()
+            # 4. Increment n_examples by the batch size, which is the same as len(labels), for example
+            # Our implementation is 5 lines
+            # YOUR CODE STARTS HERE
             input_ids = batch["input_ids"].to(device)
             labels = batch["labels"].to(device)
-            if keep_original:
-                original_code = batch["original_code"]
+            logits = model(input_ids)
+            # print("logits {}".format(logits))
+            loss = F.cross_entropy(logits.transpose(1, 2), labels)
 
-            generated_tokens = model.generate(
-                inputs=input_ids,
-                max_length=max_seq_length,
-                num_beams=beam_size,
-            )
-            decoded_preds = tokenizer.batch_decode(
-                generated_tokens, skip_special_tokens=True
-            )
-            decoded_labels = tokenizer.batch_decode(
-                labels, skip_special_tokens=True
-            )
+            total_eval_loss += loss
+            # print("predicted {}".format(torch.argmax(logits, dim=-1, keepdim=False)))
+            # print("real {}".format(labels))
+            n_correct += (torch.argmax(logits, dim=-1, keepdim=False) == labels).sum().item()
+            # print("n_correct {} ".format(n_correct))
+            n_examples += len(labels.flatten())
 
-            for pred in decoded_preds:
-                n_generated_tokens += len(tokenizer(pred)["input_ids"])
+            # YOUR CODE ENDS HERE
 
-            if keep_original:
-                decoded_preds, decoded_labels, original_code = utils.postprocess_text(
-                    decoded_preds, decoded_labels, original_code
-                )
-                bleu.add_batch(predictions=decoded_preds, references=original_code)
-            else:
-                decoded_preds, decoded_labels = utils.postprocess_text(
-                    decoded_preds, decoded_labels
-                )
-                bleu.add_batch(predictions=decoded_preds, references=decoded_labels)
+    eval_loss = (total_eval_loss / len(eval_dataloader)).item()
+    accuracy = n_correct / n_examples
+    try:
+        perplexity = math.exp(eval_loss)
+    except OverflowError:
+        logger.warning("Perplexity is infinity. Loss is probably NaN, please check your code for bugs.")
+        perplexity = float("inf")
 
+    # turn off evaluation mode
     model.train()
-    eval_metric = bleu.compute()
-    evaluation_results = {
-        "bleu": eval_metric["score"],
-        "generation_length": n_generated_tokens / len(dataloader.dataset),
+
+    return {
+        "eval/loss": eval_loss,
+        "eval/perplexity": perplexity,
+        "eval/accuracy": accuracy,
     }
-    return evaluation_results, input_ids, decoded_preds, decoded_labels
 
 
 # import ipdb
@@ -471,7 +465,7 @@ def main():
     collation_function_for_seq2seq_wrapped_eval = partial(
         collation_function_for_seq2seq,
         pad_token_id=tokenizer.pad_token_id,
-        keep_original=True,
+        keep_original=args.keep_original,
     )
 
     eval_dataloader = DataLoader(
@@ -486,6 +480,7 @@ def main():
         model = AutoModelForSeq2SeqLM.from_pretrained(args.output_dir)
     else:
         model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
+        model.init_weights()
         #config = transformers.RobertaConfig.from_json_file('config.json')
         #model = transformers.AutoModel.from_config(config)#RobertaForMaskedLM.from_config(config)
     optimizer = torch.optim.AdamW(
@@ -570,14 +565,10 @@ def main():
                     last_input_ids,
                     last_decoded_preds,
                     last_decoded_labels,
-                ) = evaluate_model(
+                ) = evaluate(
                     model=model,
                     dataloader=eval_dataloader,
-                    tokenizer=tokenizer,
                     device=args.device,
-                    max_seq_length=args.max_seq_length,
-                    beam_size=args.beam_size,
-                    keep_original=args.keep_original,
                 )
 
                 wandb.log(
