@@ -561,8 +561,6 @@ def main():
     logger.info("Saving final model checkpoint to %s", args.output_dir)
     model.save_pretrained(args.output_dir)
 
-    logger.info("Uploading tokenizer, model and config to wandb")
-    wandb.save(os.path.join(args.output_dir, "*"))
 
     logger.info(f"Script finished successfully, model saved in {args.output_dir}")
 
