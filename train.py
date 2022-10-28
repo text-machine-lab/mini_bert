@@ -64,12 +64,7 @@ def parse_args():
         action="store_true",
         help="If experiment was stopped and needs to be restarted",
     )
-    parser.add_argument(
-        "--keep_original",
-        default=False,
-        action="store_true",
-        help="Whether to compare against original text or decoded labels",
-    )
+
     # Data arguments
     parser.add_argument(
         "--dataset_path",
@@ -277,7 +272,7 @@ def preprocess_function(
     return model_inputs
 
 
-def collation_function_for_seq2seq(batch, pad_token_id, keep_original):
+def collation_function_for_seq2seq(batch, pad_token_id):
     """
     Args:
         batch: a list of dicts of numpy arrays with keys
@@ -291,19 +286,11 @@ def collation_function_for_seq2seq(batch, pad_token_id, keep_original):
         "input_ids": utils.pad(input_ids_list, pad_token_id),
         "labels": utils.pad(labels_list, pad_token_id),
     }
-    if keep_original:
-        original_list = [ex["original_code"] for ex in batch]
 
-        collated_batch = {
-            "input_ids": utils.pad(input_ids_list, pad_token_id),
-            "labels": utils.pad(labels_list, pad_token_id),
-            "original_code": original_list,
-        }
-    else:
-        collated_batch = {
-            "input_ids": utils.pad(input_ids_list, pad_token_id),
-            "labels": utils.pad(labels_list, pad_token_id),
-        }
+    collated_batch = {
+        "input_ids": utils.pad(input_ids_list, pad_token_id),
+        "labels": utils.pad(labels_list, pad_token_id),
+    }
     return collated_batch
 
 
@@ -385,7 +372,6 @@ def main():
         masked_percent=args.masked_percent,
         tokenizer=tokenizer,
         debug=args.debug,
-        keep_original=False,
     )
 
     train_dataset = raw_datasets["train"]
@@ -411,7 +397,6 @@ def main():
         masked_percent=args.masked_percent,
         tokenizer=tokenizer,
         debug=args.debug,
-        keep_original=args.keep_original,
     )
 
     eval_dataset = raw_datasets[key].map(
@@ -439,7 +424,6 @@ def main():
     collation_function_for_seq2seq_wrapped = partial(
         collation_function_for_seq2seq,
         pad_token_id=tokenizer.pad_token_id,
-        keep_original=False,
     )
 
     train_dataloader = DataLoader(
@@ -452,7 +436,6 @@ def main():
     collation_function_for_seq2seq_wrapped_eval = partial(
         collation_function_for_seq2seq,
         pad_token_id=tokenizer.pad_token_id,
-        keep_original=args.keep_original,
     )
 
     eval_dataloader = DataLoader(
