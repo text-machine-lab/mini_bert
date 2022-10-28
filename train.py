@@ -250,7 +250,6 @@ def preprocess_function(
         masked_percent,
         tokenizer,
         debug,
-        keep_original,
 ):
     """Tokenize, truncate and add special tokens to the examples. Shift the target text by one token.
 
@@ -272,8 +271,7 @@ def preprocess_function(
     mask_arr = (rand_mask < masked_percent) * (model_inputs.input_ids != 101) * (model_inputs.input_ids != 102)
     selection = torch.flatten((mask_arr[0]).nonzero()).tolist()
     model_inputs.input_ids[0, selection] = 103
-    if keep_original:
-        model_inputs["original_code"] = inputs
+
     #print(f"input size {model_inputs['input_ids'].shape}  label shape {model_inputs['labels'].shape}")
 
     return model_inputs
@@ -318,9 +316,8 @@ def evaluate(model, eval_dataloader, device, debug):
     for batch in tqdm(eval_dataloader, desc="Evaluating"):
         with torch.no_grad():
             input_ids = batch["input_ids"].to(device)
-            attention_mask = batch["attention_mask"].to(device)
             labels = batch["labels"].to(device)
-            model_output = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+            model_output = model(input_ids=input_ids, labels=labels)
             # print("logits {}".format(logits))
             loss = model_output.loss
             logits = model_output.logits
@@ -514,10 +511,9 @@ def main():
 
             input_ids = batch["input_ids"].to(device)
             labels = batch["labels"].to(device)
-            attention_mask = batch["attention_mask"].to(device)
             # ipdb.set_trace()
             #print(f"input size {input_ids.shape}  label shape {labels.shape}")
-            loss = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels).loss
+            loss = model(input_ids=input_ids, labels=labels).loss
 
             loss.backward()
             optimizer.step()
