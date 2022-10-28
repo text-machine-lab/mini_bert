@@ -309,7 +309,7 @@ def collation_function_for_seq2seq(batch, pad_token_id, keep_original):
     return collated_batch
 
 
-def evaluate(model, eval_dataloader, device):
+def evaluate(model, eval_dataloader, device, debug):
     # turn on evlauation mode: no dropout
     model.eval()
     n_correct = 0
@@ -317,28 +317,21 @@ def evaluate(model, eval_dataloader, device):
     total_eval_loss = torch.tensor(0.0, device=device)
     for batch in tqdm(eval_dataloader, desc="Evaluating"):
         with torch.no_grad():
-            # Task 4.5: Evaluation step
-            # 1. Compute the loss, just like in the training step
-            # 2. Do not compute gradients, instead add the loss to the total_eval_loss
-            # 3. Compute the number of correct predictions, and add it to n_correct, convert it to a python int
-            # You can do it like this: (torch.argmax(logits, dim=-1) == labels).sum().item()
-            # 4. Increment n_examples by the batch size, which is the same as len(labels), for example
-            # Our implementation is 5 lines
-            # YOUR CODE STARTS HERE
             input_ids = batch["input_ids"].to(device)
             labels = batch["labels"].to(device)
             logits = model(input_ids)
             # print("logits {}".format(logits))
-            loss = F.cross_entropy(logits.transpose(1, 2), labels)
+            loss = torch.nn.functional.cross_entropy(logits.transpose(1, 2), labels)
 
             total_eval_loss += loss
-            # print("predicted {}".format(torch.argmax(logits, dim=-1, keepdim=False)))
-            # print("real {}".format(labels))
+            if debug:
+                print("predicted {}".format(torch.argmax(logits, dim=-1, keepdim=False)))
+                print("real {}".format(labels))
             n_correct += (torch.argmax(logits, dim=-1, keepdim=False) == labels).sum().item()
             # print("n_correct {} ".format(n_correct))
             n_examples += len(labels.flatten())
 
-            # YOUR CODE ENDS HERE
+
 
     eval_loss = (total_eval_loss / len(eval_dataloader)).item()
     accuracy = n_correct / n_examples
@@ -558,6 +551,7 @@ def main():
                     model=model,
                     eval_dataloader=eval_dataloader,
                     device=args.device,
+                    debug=args.debug,
                 )
 
                 wandb.log(
@@ -572,7 +566,7 @@ def main():
                     break
 
                 if global_step % args.eval_every_steps == 0:
-                    metrics = evaluate(model, eval_dataloader, args.device)
+                    metrics = evaluate(model, eval_dataloader, args.device, args.debug)
                     wandb.log(metrics, step=global_step)
 
                 logger.info("Saving model checkpoint to %s", args.output_dir)
@@ -588,7 +582,7 @@ def main():
     logger.info("Uploading tokenizer, model and config to wandb")
     wandb.save(os.path.join(args.output_dir, "*"))
 
-    logger.info(f"Script finished succesfully, model saved in {args.output_dir}")
+    logger.info(f"Script finished successfully, model saved in {args.output_dir}")
 
 
 if __name__ == "__main__":
