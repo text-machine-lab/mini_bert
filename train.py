@@ -318,10 +318,12 @@ def evaluate(model, eval_dataloader, device, debug):
     for batch in tqdm(eval_dataloader, desc="Evaluating"):
         with torch.no_grad():
             input_ids = batch["input_ids"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
             labels = batch["labels"].to(device)
-            logits = model(input_ids)
+            model_output = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
             # print("logits {}".format(logits))
-            loss = torch.nn.functional.cross_entropy(logits.transpose(1, 2), labels)
+            loss = model_output.loss
+            logits = model_output.logits
 
             total_eval_loss += loss
             if debug:
@@ -512,9 +514,10 @@ def main():
 
             input_ids = batch["input_ids"].to(device)
             labels = batch["labels"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
             # ipdb.set_trace()
             #print(f"input size {input_ids.shape}  label shape {labels.shape}")
-            loss = model(input_ids=input_ids, labels=labels).loss
+            loss = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels).loss
 
             loss.backward()
             optimizer.step()
