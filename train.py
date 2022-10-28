@@ -555,7 +555,7 @@ def main():
                 model.save_pretrained(args.output_dir)
 
     logger.info("Final evaluation")
-    metrics = evaluate(model, eval_dataloader, args.device)
+    metrics = evaluate(model, eval_dataloader, args.device, args.debug)
     wandb.log(metrics, step=global_step)
 
     logger.info("Saving final model checkpoint to %s", args.output_dir)
