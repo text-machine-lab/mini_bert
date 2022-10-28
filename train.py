@@ -22,7 +22,6 @@ import wandb
 import utils
 import json
 
-tokenizer = None
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(
@@ -30,6 +29,7 @@ logging.basicConfig(
     datefmt="%m/%d/%Y %H:%M:%S",
     level=logging.INFO,
 )
+
 
 def parse_args():
     """This function creates argument parser and parses the scrip input arguments.
@@ -267,7 +267,7 @@ def preprocess_function(
     selection = torch.flatten((mask_arr[0]).nonzero()).tolist()
     model_inputs.input_ids[0, selection] = 103
 
-    #print(f"input size {model_inputs['input_ids'].shape}  label shape {model_inputs['labels'].shape}")
+    # print(f"input size {model_inputs['input_ids'].shape}  label shape {model_inputs['labels'].shape}")
 
     return model_inputs
 
@@ -316,8 +316,6 @@ def evaluate(model, eval_dataloader, device, debug):
             n_correct += (torch.argmax(logits, dim=-1, keepdim=False) == labels).sum().item()
             # print("n_correct {} ".format(n_correct))
             n_examples += len(labels.flatten())
-
-
 
     eval_loss = (total_eval_loss / len(eval_dataloader)).item()
     accuracy = n_correct / n_examples
@@ -391,16 +389,8 @@ def main():
     else:
         key = "test"
 
-    preprocess_function_wrapped_eval = partial(
-        preprocess_function,
-        max_seq_length=args.max_seq_length,
-        masked_percent=args.masked_percent,
-        tokenizer=tokenizer,
-        debug=args.debug,
-    )
-
     eval_dataset = raw_datasets[key].map(
-        preprocess_function_wrapped_eval,
+        preprocess_function_wrapped,
         batched=True,
         num_proc=args.preprocessing_num_workers,
         remove_columns=column_names,
@@ -433,15 +423,10 @@ def main():
         batch_size=args.batch_size,
     )
 
-    collation_function_for_seq2seq_wrapped_eval = partial(
-        collation_function_for_seq2seq,
-        pad_token_id=tokenizer.pad_token_id,
-    )
-
     eval_dataloader = DataLoader(
         eval_dataset,
         shuffle=False,
-        collate_fn=collation_function_for_seq2seq_wrapped_eval,
+        collate_fn=collation_function_for_seq2seq_wrapped,
         batch_size=args.batch_size,
     )
 
@@ -451,8 +436,8 @@ def main():
     else:
         model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
         model.init_weights()
-        #config = transformers.RobertaConfig.from_json_file('config.json')
-        #model = transformers.AutoModel.from_config(config)#RobertaForMaskedLM.from_config(config)
+        # config = transformers.RobertaConfig.from_json_file('config.json')
+        # model = transformers.AutoModel.from_config(config)#RobertaForMaskedLM.from_config(config)
     optimizer = torch.optim.AdamW(
         params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay
     )
@@ -495,7 +480,7 @@ def main():
             input_ids = batch["input_ids"].to(device)
             labels = batch["labels"].to(device)
             # ipdb.set_trace()
-            #print(f"input size {input_ids.shape}  label shape {labels.shape}")
+            # print(f"input size {input_ids.shape}  label shape {labels.shape}")
             loss = model(input_ids=input_ids, labels=labels).loss
 
             loss.backward()
@@ -560,7 +545,6 @@ def main():
 
     logger.info("Saving final model checkpoint to %s", args.output_dir)
     model.save_pretrained(args.output_dir)
-
 
     logger.info(f"Script finished successfully, model saved in {args.output_dir}")
 
