@@ -52,8 +52,7 @@ def parse_args():
     parser.add_argument("--vocab_size", type=int, required=True, help="Size of the vocabulary")
     parser.add_argument("--load_dir", type=str, required=True, help="Directory which has raw data.")
     parser.add_argument("--save_dir", type=str, required=True, help="Directory which will be used to save tokenizer.")
-    parser.add_argument("--pre_process_dataset", action='store_true', required=True,
-                        help="whether to preprocess dataset or not. If set to true, will preprocess and resave the dataset.")
+
     args = parser.parse_args()
 
     return args
@@ -65,40 +64,36 @@ def main():
 
     logger.info(f"Loading  dataset")
     # raw_datasets = load_dataset(args.load_dir)
-    bos_token='<s>'
-    eos_token ='</s>'
-    mask_token ='<mask>'
-    pad_token= '<pad>'
+    bos_token = '<s>'
+    eos_token = '</s>'
+    mask_token = '<mask>'
+    pad_token = '<pad>'
     unknown_token = '<unk>'
-    cls_token= '<cls>'
+    cls_token = '<cls>'
     # we need following special tokens
     tokens_special = [f'<extra_id_{i}>' for i in range(0, 100)]
     iterator = []
-    if args.pre_process_dataset:
-        with open(args.load_dir, 'r') as f:
-            data = json.load(f)
-        for i, k in enumerate(data.keys()):
-            iterator.append(data[k]['TEXT'])
-        # iterator = (data[k]['TEXT'] for i, k in enumerate(data))
-    else:
-        raw_datasets = load_dataset('json', args.load_dir)
-        iterator = (item["text"] for item in raw_datasets)
+    # if args.pre_process_dataset:
+    with open(args.load_dir, 'r') as f:
+        data = json.load(f)
+    for i, k in enumerate(data.keys()):
+        iterator.append(data[k]['TEXT'])
+
+    # else:
+    #     raw_datasets = load_dataset('json', args.load_dir)
+    #     iterator = (item["text"] for item in raw_datasets)
     logger.info(f"Building tokenizer (might take a couple of minutes)")
-    # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
-    # https://huggingface.co/docs/datasets/loading_datasets.html.
 
-    # Task 3.1: train a BPE tokenizer
-    # You only need ["UNK"] and ["PAD"] special tokens.
-    # DO NOT just copy everything from the tutorial.
     # Use vocab_size=args.vocab_size.
-    # When you run this sript use 8192. The model should converge faster with a smaller vocab size.
-    # Tokenizer training tutorial: https://huggingface.co/docs/tokenizers/python/latest/quicktour.html
-    # API reference for tokenizer.trainer class: 
+    #  The model should converge faster with a smaller vocab size.
 
-    # YOUR CODE STARTS HERE (our implementation is about 6 lines)
 
-    tokenizer = Tokenizer(BPE(bos_token=bos_token, eos_token=eos_token, mask_token=mask_token, pad_token=pad_token, cls_token=cls_token,unk_token=unknown_token,  additional_special_tokens=tokens_special))
-    tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size, special_tokens=[unknown_token, bos_token, eos_token, mask_token, pad_token, cls_token])
+    tokenizer = Tokenizer(
+        BPE(bos_token=bos_token, eos_token=eos_token, mask_token=mask_token, pad_token=pad_token, cls_token=cls_token,
+            unk_token=unknown_token, additional_special_tokens=tokens_special))
+    tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
+                                   special_tokens=[unknown_token, bos_token, eos_token, mask_token, pad_token,
+                                                   cls_token])
     tokenizer.pre_tokenizer = Whitespace()
 
     tokenizer.train_from_iterator(iterator, trainer=tokenizer_trainer)
