@@ -158,6 +158,12 @@ def parse_args():
         help="Weight decay to use.",
     )
     parser.add_argument(
+        "--beta2",
+        type=float,
+        default=0.999,
+        help="Beta2 to use for Adam.",
+    )
+    parser.add_argument(
         "--dropout_rate",
         default=0.1,
         type=float,
@@ -172,7 +178,7 @@ def parse_args():
     parser.add_argument(
         "--eval_every_steps",
         type=int,
-        default=5000,
+        default=50000,
         help="Perform evaluation every n network updates.",
     )
     parser.add_argument(
@@ -204,7 +210,7 @@ def parse_args():
     parser.add_argument(
         "--num_warmup_steps",
         type=int,
-        default=0,
+        default=1000,
         help="Number of steps for the warmup in the lr scheduler.",
     )
     parser.add_argument(
@@ -262,10 +268,11 @@ def preprocess_function(
 
     rand_mask = torch.rand(model_inputs.labels.shape)
     # where the random array is less than 0.15, we set true
-    # TODO replace 101 with special token reference from tokenizer
-    mask_arr = (rand_mask < masked_percent) * (model_inputs.input_ids != 101) * (model_inputs.input_ids != 102)
+    # all tokens upto id 104 are special tokens.  id 2 is the <mask> token
+    mask_arr = (rand_mask < masked_percent) * (model_inputs.input_ids > 104)
     selection = torch.flatten((mask_arr[0]).nonzero()).tolist()
-    model_inputs.input_ids[0, selection] = 103
+    #2 is the masked token
+    model_inputs.input_ids[0, selection] = 2
 
     # print(f"input size {model_inputs['input_ids'].shape}  label shape {model_inputs['labels'].shape}")
 
@@ -439,7 +446,7 @@ def main():
         # config = transformers.RobertaConfig.from_json_file('config.json')
         # model = transformers.AutoModel.from_config(config)#RobertaForMaskedLM.from_config(config)
     optimizer = torch.optim.AdamW(
-        params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay
+        params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, betas=(0.9, args.beta2)
     )
 
     num_update_steps_per_epoch = len(train_dataloader)
