@@ -65,8 +65,14 @@ def main():
 
     logger.info(f"Loading  dataset")
     # raw_datasets = load_dataset(args.load_dir)
+    bos_token='<s>'
+    eos_token ='</s>'
+    mask_token ='<mask>'
+    pad_token= '<pad>'
+    unknown_token = '<unk>'
+    cls_token= '<cls>'
     # we need following special tokens
-    tokens_special = ['<s>', '</s>', '<mask>', '<pad>', '<unk>'] + [f'<extra_id_{i}>' for i in range(0, 100)]
+    tokens_special = [f'<extra_id_{i}>' for i in range(0, 100)]
     iterator = []
     if args.pre_process_dataset:
         with open(args.load_dir, 'r') as f:
@@ -91,8 +97,8 @@ def main():
 
     # YOUR CODE STARTS HERE (our implementation is about 6 lines)
 
-    tokenizer = Tokenizer(BPE(unk_token="[UNK]", ))
-    tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size, special_tokens=tokens_special)
+    tokenizer = Tokenizer(BPE(bos_token=bos_token, eos_token=eos_token, mask_token=mask_token, pad_token=pad_token, cls_token=cls_token,unk_token=unknown_token,  additional_special_tokens=tokens_special))
+    tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size, special_tokens=[unknown_token, bos_token, eos_token, mask_token, pad_token, cls_token])
     tokenizer.pre_tokenizer = Whitespace()
 
     tokenizer.train_from_iterator(iterator, trainer=tokenizer_trainer)
