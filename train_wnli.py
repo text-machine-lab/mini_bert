@@ -242,7 +242,7 @@ def parse_args():
     )
     parser.add_argument(
         "--wandb_project",
-        default="mini_bert",
+        default="mini_bert_wnli_train",
         help="wandb project name to log metrics to",
     )
 
@@ -277,7 +277,7 @@ def evaluate(model, eval_dataloader, device, debug):
 
 def main():
     args = parse_args()
-
+    wandb.init(project=args.wandb_project, config=args)
     device = args.device
     if args.device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
