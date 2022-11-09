@@ -10,6 +10,48 @@ def postprocess_text(preds, labels, original_code=None):
 
     return preds, labels
 
+def filter_example(example, vocab_set, contractions, additional_exclusions=True):
+    """Filters a particular example in a dataset
+    Args:
+        example: an example in the dataset
+        vocab_set: the set of aochildes vocabulary to filter by
+        contractions: a list of contractions to be filtered out
+        additional_exclusions: a flag to specify whether to exclude additional proper nouns
+    """
+    if 'sentence' in example.features:
+            sentence = example['sentence']
+        
+        else:
+            t1 = list(example.features)[0]
+            t2 = list(example.features)[1]
+            sentence = example[t1]+" "+example[t2]
+    
+    new_sentence = sentence.split(' ')
+            
+    if additional_exclusions:
+        new_sentence = [w for n,w in enumerate(new_sentence) if (w == w.lower() or n==0)]
+    new_sentence = [re.sub('[0-9!:&“”—\-_,@#$?;’.\'\(\)"]', '', w.lower()) for w in new_sentence]
+    new_sentence = [w for w in new_sentence if w != '' and w not in contractions]
+    
+    for word in new_sentence:
+        if word not in vocab_set:
+            return False
+    return True
+        
+
+def filter_glue_dataset(dataset_name, aochildes_vocab_path="../data/AOChildes_word_frequency.csv"):
+    """Filters GLUE datasets based on AOChildes vocabulary
+    Args:
+        dataset_name: name of GLUE dataset
+        aochildes_vocab_path: the path of AOChildes vocabulary
+    """
+    
+    dataset = load_dataset('glue',dataset_name)
+    vocab_freq = pd.read_csv(aochildes_vocab_path)
+    vocab_set = set(vocab_freq['word'])
+    contractions = set(['nt','s','re','t','d','ll'])
+    
+    return dataset.filter(lambda example: filter_example(example, vocab_set,contractions))
 
 def pad(sequence_list, pad_id):
     """Pads sequence_list to the longest sequence in the batch with pad_id.
