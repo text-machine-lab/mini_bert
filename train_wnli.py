@@ -278,7 +278,7 @@ task_to_keys = {
 def main():
     args = parse_args()
     wandb.init(project=args.wandb_project, config=args)
-    metric = load_metric("glue", args.glue_task)
+    metric = load_metric("glue", args.dataset_attribute)
     device = args.device
     if args.device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -290,7 +290,7 @@ def main():
 
     #raw_datasets = load_dataset(args.dataset_path, args.dataset_attribute)
     # print(f"dataset keys {raw_datasets.keys()}")
-    raw_datasets = utils.filter_glue_dataset(args.glue_task)
+    raw_datasets = utils.filter_glue_dataset(args.dataset_attribute)
     if args.debug:
         raw_datasets = utils.sample_small_debug_dataset(
             raw_datasets, args.sample_size
@@ -303,7 +303,7 @@ def main():
     print(f"raw dataset keys {raw_datasets.keys()}")
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
-    sentence1_key, sentence2_key = task_to_keys[args.glue_task]
+    sentence1_key, sentence2_key = task_to_keys[args.dataset_attribute]
     def tokenize_function(example):
         return tokenizer(example[sentence1_key], example[sentence2_key], truncation=True, max_length=128)
 
