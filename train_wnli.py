@@ -15,7 +15,8 @@ import argparse
 import torch
 
 import transformers
-import evaluate
+import datasets
+from datasets import load_from_disk, load_dataset, load_metric
 import logging
 from tqdm.auto import tqdm
 import wandb
@@ -104,7 +105,6 @@ def parse_args():
         type=float,
         help="Percentage of input to mask",
     )
-
 
     parser.add_argument(
         "--max_seq_length",
@@ -240,22 +240,21 @@ def parse_args():
     return args
 
 
-
-
-def evaluate_fn(model, eval_dataloader, device, metric):
-    # turn on evlauation mode: no dropout
+def evaluate(model, eval_dataloader, device, metric):
+    # turn on evaluation mode: no dropout
     model.eval()
 
     for batch in tqdm(eval_dataloader, desc="Evaluating"):
         with torch.no_grad():
-            input_ids = batch["input_ids"].to(device)
-            labels = batch["labels"].to(device)
-            model_output = model(input_ids=input_ids, labels=labels)
+            batch = {k: v.to(device) for k, v in batch.items()}
+            inputs, references = batch
+            model_output = model(**batch)
+            print(model_output)
             # print("logits {}".format(logits))
             loss = model_output.loss
             logits = model_output.logits
             preds = torch.argmax(logits, dim=-1)
-            metric.add_batch(predictions=preds, references=batch['labels'])
+            metric.add_batch(predictions=preds, references=references)
     model.train()
 
     return metric.compute()
@@ -278,23 +277,24 @@ task_to_keys = {
 def make_dataloader(dataset, sentence1_key, sentence2_key, batch_size, data_collator, tokenizer):
     def tokenize_function(example):
         return tokenizer(example[sentence1_key], example[sentence2_key], truncation=True, max_length=128)
+
     dataset = dataset.map(tokenize_function, batched=True)
     dataset = dataset.remove_columns(['idx', sentence1_key, sentence2_key])
     dataset = dataset.rename_column('label', 'labels')
     dataset.set_format('pt')
 
     dataset = torch.utils.data.DataLoader(dataset,
-                                             shuffle=True,
-                                             batch_size=batch_size,
-                                             collate_fn=data_collator
-                                             )
+                                          shuffle=True,
+                                          batch_size=batch_size,
+                                          collate_fn=data_collator
+                                          )
     return dataset
+
+
 def main():
     args = parse_args()
     wandb.init(project=args.wandb_project, config=args)
-
-    metric = evaluate.load("glue", args.dataset_attribute)
-
+    metric = load_metric("glue", args.dataset_attribute)
     device = args.device
     if args.device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -304,7 +304,7 @@ def main():
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
     # read in data
 
-    #raw_datasets = load_dataset(args.dataset_path, args.dataset_attribute)
+    # raw_datasets = load_dataset(args.dataset_path, args.dataset_attribute)
     # print(f"dataset keys {raw_datasets.keys()}")
     train_dataset = utils.filter_glue_dataset(args.dataset_attribute)
     eval_dataset = utils.filter_glue_dataset(args.dataset_attribute, dataset_type="validation")
@@ -323,10 +323,8 @@ def main():
 
     sentence1_key, sentence2_key = task_to_keys[args.dataset_attribute]
 
-    train_data = make_dataloader(train_dataset, sentence1_key, sentence2_key,args.batch_size, data_collator, tokenizer)
-    eval_data = make_dataloader(eval_dataset, sentence1_key, sentence2_key,args.batch_size, data_collator, tokenizer)
-
-
+    train_data = make_dataloader(train_dataset, sentence1_key, sentence2_key, args.batch_size, data_collator, tokenizer)
+    eval_data = make_dataloader(eval_dataset, sentence1_key, sentence2_key, args.batch_size, data_collator, tokenizer)
 
     for batch in train_data:
         [print('{:>20} : {}'.format(k, v.shape)) for k, v in batch.items()]
@@ -359,7 +357,7 @@ def main():
     logger.info(f"  Total optimization steps = {args.max_train_steps}")
     progress_bar = tqdm(range(args.max_train_steps))
     global_step = 0
-    model.to(args.device)
+    model.to(device)
 
     # Training loop
     for epoch in range(args.num_train_epochs):
@@ -371,7 +369,7 @@ def main():
             if global_step >= args.max_train_steps:
                 break
 
-            batch = {k:v.to(args.device) for k,v in batch.items()}
+            batch = {k: v.to(device) for k, v in batch.items()}
             # ipdb.set_trace()
 
             loss = model(**batch).loss
@@ -405,10 +403,10 @@ def main():
             ):
                 (
                     metric_acc
-                ) = evaluate_fn(
+                ) = evaluate(
                     model=model,
                     eval_dataloader=eval_data,
-                    device=args.device,
+                    device=device,
                     metric=metric,
                 )
 
@@ -422,14 +420,14 @@ def main():
                     break
 
                 if global_step % args.eval_every_steps == 0:
-                    metrics = evaluate_fn(model, eval_data, args.device, args.debug)
+                    metrics = evaluate(model, eval_data, device, args.debug)
                     wandb.log(metrics, step=global_step)
 
                 logger.info("Saving model checkpoint to %s", args.output_dir)
                 model.save_pretrained(args.output_dir)
 
     logger.info("Final evaluation")
-    metrics = evaluate_fn(model, eval_data, args.device, args.debug)
+    metrics = evaluate(model, eval_data, device, args.debug)
     wandb.log(metrics, step=global_step)
 
     logger.info("Saving final model checkpoint to %s", args.output_dir)
