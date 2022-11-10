@@ -298,7 +298,7 @@ def main():
     print("Data loaded")
     # Preprocessing the datasets.
     # First we tokenize all the texts.
-    column_names = raw_datasets["train"].column_names
+    column_names = raw_datasets.column_names
     print(f"Data column_names{column_names}")
     print(f"raw dataset keys {raw_datasets.keys()}")
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
@@ -312,20 +312,13 @@ def main():
     tokenized_data = tokenized_data.rename_column('label', 'labels')
     tokenized_data.set_format('pt')
 
-    train_data = torch.utils.data.DataLoader(tokenized_data["train"],
+    train_data = torch.utils.data.DataLoader(tokenized_data,
                                              shuffle=True,
                                              batch_size=args.batch_size,
                                              collate_fn=data_collator
                                              )
 
-    eval_data = torch.utils.data.DataLoader(tokenized_data["validation"],
-                                            batch_size=args.batch_size,
-                                            collate_fn=data_collator
-                                            )
-    test_data = torch.utils.data.DataLoader(tokenized_data["test"],
-                                            batch_size=args.batch_size,
-                                            collate_fn=data_collator
-                                            )
+
     for batch in train_data:
         [print('{:>20} : {}'.format(k, v.shape)) for k, v in batch.items()]
         break
