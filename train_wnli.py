@@ -75,7 +75,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_attribute",
         type=str,
-        default="wnli",
+        default="qnli",
         help="path to raw dataset",
     )
 
@@ -106,12 +106,7 @@ def parse_args():
         help="Percentage of input to mask",
     )
 
-    parser.add_argument(
-        "--fcn_hidden",
-        default=2048,
-        type=int,
-        help="Hidden size of the FCN",
-    )
+
     parser.add_argument(
         "--max_seq_length",
         type=int,
@@ -234,12 +229,7 @@ def parse_args():
             "increasing this (until a certain value) would likely improve your results."
         ),
     )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=None,
-        help="A seed for reproducible training.",
-    )
+
     parser.add_argument(
         "--wandb_project",
         default="mini_bert_wnli_train",
@@ -251,9 +241,9 @@ def parse_args():
     return args
 
 
-metric = load_metric("glue","wnli")
 
-def evaluate(model, eval_dataloader, device, debug):
+
+def evaluate(model, eval_dataloader, device, metric):
     # turn on evlauation mode: no dropout
     model.eval()
 
@@ -278,6 +268,7 @@ def evaluate(model, eval_dataloader, device, debug):
 def main():
     args = parse_args()
     wandb.init(project=args.wandb_project, config=args)
+    metric = load_metric("glue", args.glue_task)
     device = args.device
     if args.device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -286,11 +277,10 @@ def main():
         args.tokenizer_path) if args.tokenizer_path else BertTokenizer.from_pretrained('bert-base-uncased')
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
     # read in data
-    # TODO make sure data has train and validation sets.
-    # with open(args.dataset_path) as f:
-    #    data_list = json.load(f)
-    raw_datasets = load_dataset(args.dataset_path, args.dataset_attribute)
+
+    #raw_datasets = load_dataset(args.dataset_path, args.dataset_attribute)
     # print(f"dataset keys {raw_datasets.keys()}")
+    raw_datasets = utils.filter_glue_dataset(args.glue_task)
     if args.debug:
         raw_datasets = utils.sample_small_debug_dataset(
             raw_datasets, args.sample_size
@@ -318,15 +308,15 @@ def main():
                                              )
 
     eval_data = torch.utils.data.DataLoader(tokenized_data["validation"],
-                                           batch_size=args.batch_size,
-                                           collate_fn=data_collator
-                                           )
+                                            batch_size=args.batch_size,
+                                            collate_fn=data_collator
+                                            )
     test_data = torch.utils.data.DataLoader(tokenized_data["test"],
                                             batch_size=args.batch_size,
                                             collate_fn=data_collator
                                             )
     for batch in train_data:
-        [print('{:>20} : {}'.format(k,v.shape)) for k,v in batch.items()]
+        [print('{:>20} : {}'.format(k, v.shape)) for k, v in batch.items()]
         break
 
     model = RobertaForMaskedLM.from_pretrained(args.output_dir)
@@ -407,7 +397,7 @@ def main():
                     model=model,
                     eval_dataloader=eval_data,
                     device=args.device,
-                    debug=args.debug,
+                    metric=metric,
                 )
 
                 wandb.log(

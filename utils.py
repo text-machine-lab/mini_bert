@@ -1,6 +1,10 @@
+import re
 from copy import deepcopy
 import random
+
+import pandas as pd
 import torch
+from datasets import load_dataset
 
 
 def postprocess_text(preds, labels, original_code=None):
@@ -18,13 +22,14 @@ def filter_example(example, vocab_set, contractions, additional_exclusions=True)
         contractions: a list of contractions to be filtered out
         additional_exclusions: a flag to specify whether to exclude additional proper nouns
     """
-    if 'sentence' in example.features:
-            sentence = example['sentence']
+    features = example.keys()
+    if 'sentence' in features:
+        sentence = example['sentence']
         
-        else:
-            t1 = list(example.features)[0]
-            t2 = list(example.features)[1]
-            sentence = example[t1]+" "+example[t2]
+    else:
+        t1 = list(features)[0]
+        t2 = list(features)[1]
+        sentence = example[t1]+" "+example[t2]
     
     new_sentence = sentence.split(' ')
             
@@ -39,18 +44,18 @@ def filter_example(example, vocab_set, contractions, additional_exclusions=True)
     return True
         
 
-def filter_glue_dataset(dataset_name, aochildes_vocab_path="../data/AOChildes_word_frequency.csv"):
+def filter_glue_dataset(dataset_name, dataset_type="train", aochildes_vocab_path="../data/AOChildes_word_frequency.csv"):
     """Filters GLUE datasets based on AOChildes vocabulary
     Args:
         dataset_name: name of GLUE dataset
+        dataset_type: train test of validation
         aochildes_vocab_path: the path of AOChildes vocabulary
     """
     
-    dataset = load_dataset('glue',dataset_name)
+    dataset = load_dataset('glue', dataset_name)[dataset_type]
     vocab_freq = pd.read_csv(aochildes_vocab_path)
     vocab_set = set(vocab_freq['word'])
     contractions = set(['nt','s','re','t','d','ll'])
-    
     return dataset.filter(lambda example: filter_example(example, vocab_set,contractions))
 
 def pad(sequence_list, pad_id):
