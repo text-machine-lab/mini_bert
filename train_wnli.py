@@ -3,8 +3,8 @@ import math
 
 import numpy
 from torch import rand
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BertTokenizer, RobertaForMaskedLM, \
-    DataCollatorWithPadding
+from transformers import AutoTokenizer, BertTokenizer, \
+    DataCollatorWithPadding, AutoModelForSequenceClassification
 
 import random
 
@@ -263,7 +263,17 @@ def evaluate(model, eval_dataloader, device, metric):
 
 
 # import ipdb
-
+task_to_keys = {
+    "cola": ("sentence", None),
+    "mnli": ("premise", "hypothesis"),
+    "mrpc": ("sentence1", "sentence2"),
+    "qnli": ("question", "sentence"),
+    "qqp": ("question1", "question2"),
+    "rte": ("sentence1", "sentence2"),
+    "sst2": ("sentence", None),
+    "stsb": ("sentence1", "sentence2"),
+    "wnli": ("sentence1", "sentence2"),
+}
 
 def main():
     args = parse_args()
@@ -293,11 +303,12 @@ def main():
     print(f"raw dataset keys {raw_datasets.keys()}")
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
+    sentence1_key, sentence2_key = task_to_keys[args.glue_task]
     def tokenize_function(example):
-        return tokenizer(example['sentence1'], example['sentence2'], truncation=True)
+        return tokenizer(example[sentence1_key], example[sentence2_key], truncation=True, max_length=128)
 
     tokenized_data = raw_datasets.map(tokenize_function, batched=True)
-    tokenized_data = tokenized_data.remove_columns(['idx', 'sentence1', 'sentence2'])
+    tokenized_data = tokenized_data.remove_columns(['idx', sentence1_key, sentence2_key])
     tokenized_data = tokenized_data.rename_column('label', 'labels')
     tokenized_data.set_format('pt')
 
@@ -319,7 +330,7 @@ def main():
         [print('{:>20} : {}'.format(k, v.shape)) for k, v in batch.items()]
         break
 
-    model = RobertaForMaskedLM.from_pretrained(args.output_dir)
+    model = AutoModelForSequenceClassification.from_pretrained(args.output_dir)
 
     optimizer = torch.optim.AdamW(
         params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, betas=(0.9, args.beta2)
@@ -346,7 +357,7 @@ def main():
     logger.info(f"  Total optimization steps = {args.max_train_steps}")
     progress_bar = tqdm(range(args.max_train_steps))
     global_step = 0
-    model.to(device)
+    model.to(args.device)
 
     # Training loop
     for epoch in range(args.num_train_epochs):
@@ -358,11 +369,10 @@ def main():
             if global_step >= args.max_train_steps:
                 break
 
-            input_ids = batch["input_ids"].to(device)
-            labels = batch["labels"].to(device)
+            batch = {k:v.to(args.device) for k,v in batch.items()}
             # ipdb.set_trace()
-            # print(f"input size {input_ids.shape}  label shape {labels.shape}")
-            loss = model(input_ids=input_ids, labels=labels).loss
+
+            loss = model(**batch).loss
 
             loss.backward()
             optimizer.step()
@@ -402,7 +412,7 @@ def main():
 
                 wandb.log(
                     {
-                        "eval/accuracy": metric_acc.accuracy,
+                        "eval/accuracy": metric_acc,
                     },
                     step=global_step,
                 )
