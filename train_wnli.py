@@ -275,6 +275,29 @@ task_to_keys = {
     "wnli": ("sentence1", "sentence2"),
 }
 
+
+def tokenize_function(tokenizer, sentence1_key, sentence2_key, example):
+    return tokenizer(example[sentence1_key], example[sentence2_key], truncation=True, max_length=128)
+
+
+def make_dataloader(dataset, sentence1_key, sentence2_key, batch_size, data_collator, tokenizer):
+    tokenizer_partial=partial(
+        tokenize_function,
+        tokenizer=tokenizer,
+        sentence1_key=sentence1_key,
+        sentence2_key=sentence2_key,
+    )
+    dataset = dataset.map(tokenizer_partial, batched=True)
+    dataset = dataset.remove_columns(['idx', sentence1_key, sentence2_key])
+    dataset = dataset.rename_column('label', 'labels')
+    dataset.set_format('pt')
+
+    dataset = torch.utils.data.DataLoader(dataset,
+                                             shuffle=True,
+                                             batch_size=batch_size,
+                                             collate_fn=data_collator
+                                             )
+    return dataset
 def main():
     args = parse_args()
     wandb.init(project=args.wandb_project, config=args)
@@ -290,33 +313,26 @@ def main():
 
     #raw_datasets = load_dataset(args.dataset_path, args.dataset_attribute)
     # print(f"dataset keys {raw_datasets.keys()}")
-    raw_datasets = utils.filter_glue_dataset(args.dataset_attribute)
+    train_dataset = utils.filter_glue_dataset(args.dataset_attribute)
+    eval_dataset = utils.filter_glue_dataset(args.dataset_attribute, dataset_type="validation")
+
     if args.debug:
-        raw_datasets = utils.sample_small_debug_dataset(
-            raw_datasets, args.sample_size
+        train_dataset = utils.sample_small_debug_dataset(
+            train_dataset, args.sample_size
         )
     print("Data loaded")
     # Preprocessing the datasets.
     # First we tokenize all the texts.
-    column_names = raw_datasets.column_names
+    column_names = train_dataset.column_names
     print(f"Data column_names{column_names}")
-    print(f"raw dataset keys {raw_datasets.keys()}")
+
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     sentence1_key, sentence2_key = task_to_keys[args.dataset_attribute]
-    def tokenize_function(example):
-        return tokenizer(example[sentence1_key], example[sentence2_key], truncation=True, max_length=128)
 
-    tokenized_data = raw_datasets.map(tokenize_function, batched=True)
-    tokenized_data = tokenized_data.remove_columns(['idx', sentence1_key, sentence2_key])
-    tokenized_data = tokenized_data.rename_column('label', 'labels')
-    tokenized_data.set_format('pt')
+    train_data = make_dataloader(train_dataset, sentence1_key, sentence2_key,args.batch_size, data_collator, tokenizer)
+    eval_data = make_dataloader(eval_dataset, sentence1_key, sentence2_key,args.batch_size, data_collator, tokenizer)
 
-    train_data = torch.utils.data.DataLoader(tokenized_data,
-                                             shuffle=True,
-                                             batch_size=args.batch_size,
-                                             collate_fn=data_collator
-                                             )
 
 
     for batch in train_data:
