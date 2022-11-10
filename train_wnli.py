@@ -240,8 +240,9 @@ def parse_args():
     return args
 
 
-def evaluate(model, eval_dataloader, device, metric):
+def evaluate(model, eval_dataloader, device, task):
     # turn on evaluation mode: no dropout
+    metric = load_metric("glue", task)
     model.eval()
     average_loss = 0
     num_batchs=0
@@ -294,7 +295,7 @@ def make_dataloader(dataset, sentence1_key, sentence2_key, batch_size, data_coll
 def main():
     args = parse_args()
     wandb.init(project=args.wandb_project, config=args)
-    metric = load_metric("glue", args.dataset_attribute)
+
     device = args.device
     if args.device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -407,7 +408,7 @@ def main():
                     model=model,
                     eval_dataloader=eval_data,
                     device=device,
-                    metric=metric,
+                    task =args.dataset_attribute
                 )
 
                 wandb.log(
@@ -427,7 +428,7 @@ def main():
                 model.save_pretrained(args.output_dir)
 
     logger.info("Final evaluation")
-    metrics = evaluate(model, eval_data, device, args.debug)
+    metrics = evaluate(model, eval_data, device, args.dataset_attribute)
     wandb.log(metrics, step=global_step)
 
     logger.info("Saving final model checkpoint to %s", args.output_dir)
