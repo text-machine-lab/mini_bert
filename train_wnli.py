@@ -293,7 +293,9 @@ def make_dataloader(dataset, sentence1_key, sentence2_key, batch_size, data_coll
 def main():
     args = parse_args()
     wandb.init(project=args.wandb_project, config=args)
-    metric = load_metric("glue", args.dataset_attribute)
+
+    metric = evaluate.load("glue", args.dataset_attribute)
+
     device = args.device
     if args.device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
