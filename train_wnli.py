@@ -421,7 +421,7 @@ def main():
                     break
 
                 if global_step % args.eval_every_steps == 0:
-                    metrics = evaluate(model, eval_data, device, args.debug)
+                    metrics = evaluate(model, eval_data, device, task =args.dataset_attribute)
                     wandb.log(metrics, step=global_step)
 
                 logger.info("Saving model checkpoint to %s", args.output_dir)
