@@ -276,18 +276,10 @@ task_to_keys = {
 }
 
 
-def tokenize_function(tokenizer, sentence1_key, sentence2_key, example):
-    return tokenizer(example[sentence1_key], example[sentence2_key], truncation=True, max_length=128)
-
-
 def make_dataloader(dataset, sentence1_key, sentence2_key, batch_size, data_collator, tokenizer):
-    tokenizer_partial=partial(
-        tokenize_function,
-        tokenizer=tokenizer,
-        sentence1_key=sentence1_key,
-        sentence2_key=sentence2_key,
-    )
-    dataset = dataset.map(tokenizer_partial, batched=True)
+    def tokenize_function(example):
+        return tokenizer(example[sentence1_key], example[sentence2_key], truncation=True, max_length=128)
+    dataset = dataset.map(tokenize_function, batched=True)
     dataset = dataset.remove_columns(['idx', sentence1_key, sentence2_key])
     dataset = dataset.rename_column('label', 'labels')
     dataset.set_format('pt')
