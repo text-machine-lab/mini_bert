@@ -243,18 +243,19 @@ def parse_args():
 def evaluate(model, eval_dataloader, device, metric):
     # turn on evaluation mode: no dropout
     model.eval()
-
+    average_loss = 0
+    num_batchs=0
     for batch in tqdm(eval_dataloader, desc="Evaluating"):
         with torch.no_grad():
             batch = {k: v.to(device) for k, v in batch.items()}
-            inputs, references = batch
+            print(batch)
             model_output = model(**batch)
-            print(model_output)
-            # print("logits {}".format(logits))
-            loss = model_output.loss
+
+            average_loss+= model_output.loss
+            num_batchs+=1
             logits = model_output.logits
             preds = torch.argmax(logits, dim=-1)
-            metric.add_batch(predictions=preds, references=references)
+            metric.add_batch(predictions=preds, references=batch.labels)
     model.train()
 
     return metric.compute()
