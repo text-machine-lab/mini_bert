@@ -15,8 +15,7 @@ import argparse
 import torch
 
 import transformers
-import datasets
-from datasets import load_from_disk, load_dataset, load_metric
+import evaluate
 import logging
 from tqdm.auto import tqdm
 import wandb
@@ -243,7 +242,7 @@ def parse_args():
 
 
 
-def evaluate(model, eval_dataloader, device, metric):
+def evaluate_fn(model, eval_dataloader, device, metric):
     # turn on evlauation mode: no dropout
     model.eval()
 
@@ -406,7 +405,7 @@ def main():
             ):
                 (
                     metric_acc
-                ) = evaluate(
+                ) = evaluate_fn(
                     model=model,
                     eval_dataloader=eval_data,
                     device=args.device,
@@ -423,14 +422,14 @@ def main():
                     break
 
                 if global_step % args.eval_every_steps == 0:
-                    metrics = evaluate(model, eval_data, args.device, args.debug)
+                    metrics = evaluate_fn(model, eval_data, args.device, args.debug)
                     wandb.log(metrics, step=global_step)
 
                 logger.info("Saving model checkpoint to %s", args.output_dir)
                 model.save_pretrained(args.output_dir)
 
     logger.info("Final evaluation")
-    metrics = evaluate(model, eval_data, args.device, args.debug)
+    metrics = evaluate_fn(model, eval_data, args.device, args.debug)
     wandb.log(metrics, step=global_step)
 
     logger.info("Saving final model checkpoint to %s", args.output_dir)
