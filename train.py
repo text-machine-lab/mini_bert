@@ -20,8 +20,7 @@ import logging
 from tqdm.auto import tqdm
 import wandb
 import utils
-import json
-
+import train_wnli
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(
@@ -73,6 +72,12 @@ def parse_args():
         help="path to raw dataset",
     )
 
+    parser.add_argument(
+        "--dataset_attribute",
+        type=str,
+        default="qnli",
+        help="glue task to evaluate on",
+    )
     parser.add_argument(
         "--tokenizer_path",
         type=str,
@@ -140,6 +145,12 @@ def parse_args():
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
+        "--eval_batch_size",
+        type=int,
+        default=8,
+        help="Batch size (per device) for the training dataloader.",
+    )
+    parser.add_argument(
         "--sample_size",
         type=int,
         default=100,
@@ -178,7 +189,7 @@ def parse_args():
     parser.add_argument(
         "--eval_every_steps",
         type=int,
-        default=50000,
+        default=1000,
         help="Perform evaluation every n network updates.",
     )
     parser.add_argument(
@@ -271,7 +282,7 @@ def preprocess_function(
     # all tokens upto id 104 are special tokens.  id 2 is the <mask> token
     mask_arr = (rand_mask < masked_percent) * (model_inputs.input_ids > 104)
     selection = torch.flatten((mask_arr[0]).nonzero()).tolist()
-    #2 is the masked token
+    # 2 is the masked token
     model_inputs.input_ids[0, selection] = 2
 
     # print(f"input size {model_inputs['input_ids'].shape}  label shape {model_inputs['labels'].shape}")
@@ -396,14 +407,8 @@ def main():
     else:
         key = "test"
 
-    eval_dataset = raw_datasets[key].map(
-        preprocess_function_wrapped,
-        batched=True,
-        num_proc=args.preprocessing_num_workers,
-        remove_columns=column_names,
-        load_from_cache_file=not args.overwrite_cache,
-        desc="Running tokenizer on dataset",
-    )
+    _, eval_dataloader = train_wnli.prep_dataset(tokenizer, args.dataset_attribute, args.eval_batch_size,
+                                                 args.sample_size, args.debug)
 
     # Log a few random samples from the training set:
     for index in random.sample(range(len(train_dataset)), 2):
@@ -430,21 +435,14 @@ def main():
         batch_size=args.batch_size,
     )
 
-    eval_dataloader = DataLoader(
-        eval_dataset,
-        shuffle=False,
-        collate_fn=collation_function_for_seq2seq_wrapped,
-        batch_size=args.batch_size,
-    )
-
     wandb.init(project=args.wandb_project, config=args)
     if args.restart:
         model = AutoModelForSeq2SeqLM.from_pretrained(args.output_dir)
     else:
         model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
-        model.init_weights()
-        # config = transformers.RobertaConfig.from_json_file('config.json')
-        # model = transformers.AutoModel.from_config(config)#RobertaForMaskedLM.from_config(config)
+        config = model.config
+        config.vocab_size = tokenizer.vocab_size
+        model = RobertaForMaskedLM(config)
     optimizer = torch.optim.AdamW(
         params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, betas=(0.9, args.beta2)
     )
@@ -518,21 +516,17 @@ def main():
                     or global_step == args.max_train_steps
             ):
                 (
-                    eval_loss,
-                    perplexity,
-                    accuracy,
-                ) = evaluate(
+                    metric,
+                ) = train_wnli.evaluate(
                     model=model,
                     eval_dataloader=eval_dataloader,
-                    device=args.device,
-                    debug=args.debug,
+                    device=device,
+                    task=args.dataset_attribute,
                 )
 
                 wandb.log(
                     {
-                        "eval/loss": eval_loss,
-                        "eval/perplexity": perplexity,
-                        "eval/accuracy": accuracy,
+                        "eval metric": metric,
                     },
                     step=global_step,
                 )
@@ -540,14 +534,20 @@ def main():
                     break
 
                 if global_step % args.eval_every_steps == 0:
-                    metrics = evaluate(model, eval_dataloader, args.device, args.debug)
+                    metrics = evaluate(model=model,
+                                       eval_dataloader=eval_dataloader,
+                                       device=device,
+                                       task=args.dataset_attribute)
                     wandb.log(metrics, step=global_step)
 
                 logger.info("Saving model checkpoint to %s", args.output_dir)
                 model.save_pretrained(args.output_dir)
 
     logger.info("Final evaluation")
-    metrics = evaluate(model, eval_dataloader, args.device, args.debug)
+    metrics = evaluate(model=model,
+                       eval_dataloader=eval_dataloader,
+                       device=device,
+                       task=args.dataset_attribute)
     wandb.log(metrics, step=global_step)
 
     logger.info("Saving final model checkpoint to %s", args.output_dir)

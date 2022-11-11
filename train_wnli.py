@@ -245,14 +245,14 @@ def evaluate(model, eval_dataloader, device, task):
     metric = load_metric("glue", task)
     model.eval()
     average_loss = 0
-    num_batchs=0
+    num_batchs = 0
     for batch in tqdm(eval_dataloader, desc="Evaluating"):
         with torch.no_grad():
             batch = {k: v.to(device) for k, v in batch.items()}
             model_output = model(**batch)
 
-            average_loss+= model_output.loss
-            num_batchs+=1
+            average_loss += model_output.loss
+            num_batchs += 1
             logits = model_output.logits
             preds = torch.argmax(logits, dim=-1)
             metric.add_batch(predictions=preds, references=batch["labels"])
@@ -292,6 +292,33 @@ def make_dataloader(dataset, sentence1_key, sentence2_key, batch_size, data_coll
     return dataset
 
 
+def prep_dataset(tokenizer, dataset_attribute, batch_size, sample_size, debug=False):
+    train_dataset = utils.filter_glue_dataset(dataset_attribute)
+    eval_dataset = utils.filter_glue_dataset(dataset_attribute, dataset_type="validation")
+
+    if debug:
+        train_dataset = utils.sample_small_debug_dataset(
+            train_dataset, sample_size
+        )
+    print("Data loaded")
+    # Preprocessing the datasets.
+    # First we tokenize all the texts.
+    column_names = train_dataset.column_names
+    print(f"Data column_names{column_names}")
+
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+
+    sentence1_key, sentence2_key = task_to_keys[dataset_attribute]
+
+    train_data = make_dataloader(train_dataset, sentence1_key, sentence2_key, batch_size, data_collator, tokenizer)
+    eval_data = make_dataloader(eval_dataset, sentence1_key, sentence2_key, batch_size, data_collator, tokenizer)
+
+    for batch in train_data:
+        [print('{:>20} : {}'.format(k, v.shape)) for k, v in batch.items()]
+        break
+    return train_data, eval_data
+
+
 def main():
     args = parse_args()
     wandb.init(project=args.wandb_project, config=args)
@@ -307,30 +334,7 @@ def main():
 
     # raw_datasets = load_dataset(args.dataset_path, args.dataset_attribute)
     # print(f"dataset keys {raw_datasets.keys()}")
-    train_dataset = utils.filter_glue_dataset(args.dataset_attribute)
-    eval_dataset = utils.filter_glue_dataset(args.dataset_attribute, dataset_type="validation")
-
-    if args.debug:
-        train_dataset = utils.sample_small_debug_dataset(
-            train_dataset, args.sample_size
-        )
-    print("Data loaded")
-    # Preprocessing the datasets.
-    # First we tokenize all the texts.
-    column_names = train_dataset.column_names
-    print(f"Data column_names{column_names}")
-
-    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
-
-    sentence1_key, sentence2_key = task_to_keys[args.dataset_attribute]
-
-    train_data = make_dataloader(train_dataset, sentence1_key, sentence2_key, args.batch_size, data_collator, tokenizer)
-    eval_data = make_dataloader(eval_dataset, sentence1_key, sentence2_key, args.batch_size, data_collator, tokenizer)
-
-    for batch in train_data:
-        [print('{:>20} : {}'.format(k, v.shape)) for k, v in batch.items()]
-        break
-
+    train_data, eval_data = prep_dataset(tokenizer, args)
     model = AutoModelForSequenceClassification.from_pretrained(args.output_dir)
 
     optimizer = torch.optim.AdamW(
@@ -408,7 +412,7 @@ def main():
                     model=model,
                     eval_dataloader=eval_data,
                     device=device,
-                    task =args.dataset_attribute
+                    task=args.dataset_attribute
                 )
 
                 wandb.log(
@@ -421,7 +425,7 @@ def main():
                     break
 
                 if global_step % args.eval_every_steps == 0:
-                    metrics = evaluate(model, eval_data, device, task =args.dataset_attribute)
+                    metrics = evaluate(model, eval_data, device, task=args.dataset_attribute)
                     wandb.log(metrics, step=global_step)
 
                 logger.info("Saving model checkpoint to %s", args.output_dir)
