@@ -54,6 +54,12 @@ def parse_args():
     parser.add_argument("--save_dir", type=str, required=True, help="Directory which will be used to save tokenizer.")
     parser.add_argument("--roberta_tokenizer", action="store_true",
         help="If set, roberta tokenizer will be trained, otherwise BPE")
+    parser.add_argument(
+        "--pre_process_dataset",
+        default=False,
+        action="store_true",
+        help="If data is not formatted into hugging face format this should be true",
+    )
     args = parser.parse_args()
 
     return args
