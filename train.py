@@ -3,7 +3,7 @@ import math
 
 import numpy
 from torch import rand
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BertTokenizer, RobertaForMaskedLM, \
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, RobertaTokenizerFast, RobertaForMaskedLM, \
     AutoModelForSequenceClassification
 
 import random
@@ -338,7 +338,7 @@ def main():
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     tokenizer = AutoTokenizer.from_pretrained(
-        args.tokenizer_path) if args.tokenizer_path else BertTokenizer.from_pretrained('bert-base-uncased')
+        args.tokenizer_path) if args.tokenizer_path else RobertaTokenizerFast.from_pretrained("roberta-base")
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
     # read in data
     # TODO make sure data has train and validation sets.
