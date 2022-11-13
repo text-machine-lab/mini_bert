@@ -293,13 +293,16 @@ def make_dataloader(dataset, sentence1_key, sentence2_key, batch_size, data_coll
 
 
 def prep_dataset(tokenizer, dataset_attribute, batch_size, sample_size, debug=False):
-    train_dataset = utils.filter_glue_dataset(dataset_attribute)
-    eval_dataset = utils.filter_glue_dataset(dataset_attribute, dataset_type="validation")
+    filtered_dataset=utils.filter_glue_dataset(dataset_name=dataset_attribute)
+
 
     if debug:
-        train_dataset = utils.sample_small_debug_dataset(
-            train_dataset, sample_size
+        filtered_dataset = utils.sample_small_debug_dataset(
+            filtered_dataset, sample_size
         )
+
+    train_dataset = filtered_dataset["train"]
+    eval_dataset = filtered_dataset["validation"]
     print("Data loaded")
     # Preprocessing the datasets.
     # First we tokenize all the texts.

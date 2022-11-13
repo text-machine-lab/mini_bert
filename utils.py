@@ -44,19 +44,21 @@ def filter_example(example, vocab_set, contractions, additional_exclusions=True)
     return True
         
 
-def filter_glue_dataset(dataset_name, dataset_type="train", aochildes_vocab_path="../data/AOChildes_word_frequency.csv"):
+def filter_glue_dataset(dataset_name, dataset_types=["train", "test", "validation"], aochildes_vocab_path="../data/AOChildes_word_frequency.csv"):
     """Filters GLUE datasets based on AOChildes vocabulary
     Args:
         dataset_name: name of GLUE dataset
-        dataset_type: train test of validation
+        dataset_types: train test of validation
         aochildes_vocab_path: the path of AOChildes vocabulary
     """
-    
-    dataset = load_dataset('glue', dataset_name)[dataset_type]
-    vocab_freq = pd.read_csv(aochildes_vocab_path)
-    vocab_set = set(vocab_freq['word'])
-    contractions = set(['nt','s','re','t','d','ll'])
-    return dataset.filter(lambda example: filter_example(example, vocab_set,contractions))
+    datasets = {}
+    for dataset_type in dataset_types:
+        dataset = load_dataset('glue', dataset_name)[dataset_type]
+        vocab_freq = pd.read_csv(aochildes_vocab_path)
+        vocab_set = set(vocab_freq['word'])
+        contractions = set(['nt','s','re','t','d','ll'])
+        datasets[dataset_type] = dataset.filter(lambda example: filter_example(example, vocab_set, contractions))
+    return datasets
 
 def pad(sequence_list, pad_id):
     """Pads sequence_list to the longest sequence in the batch with pad_id.
@@ -95,3 +97,4 @@ def sample_small_debug_dataset(raw_datasets, sample_size):
     if "test" in raw_datasets:
         raw_datasets["test"] = deepcopy(subset)
     return raw_datasets
+

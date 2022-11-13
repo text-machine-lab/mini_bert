@@ -71,7 +71,6 @@ def parse_args():
         default="formatted_data",
         help="path to raw dataset",
     )
-
     parser.add_argument(
         "--dataset_attribute",
         type=str,
@@ -218,27 +217,7 @@ def parse_args():
         default=1000,
         help="Number of steps for the warmup in the lr scheduler.",
     )
-    parser.add_argument(
-        "--generation_type",
-        choices=["greedy", "beam_search"],
-        default="beam_search",
-    )
-    parser.add_argument(
-        "--beam_size",
-        type=int,
-        default=5,
-        help=(
-            "Beam size for beam search generation. "
-            "Decreasing this parameter will make evaluation much faster, "
-            "increasing this (until a certain value) would likely improve your results."
-        ),
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=None,
-        help="A seed for reproducible training.",
-    )
+
     parser.add_argument(
         "--wandb_project",
         default="mini_bert",
