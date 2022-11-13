@@ -33,6 +33,7 @@ from tokenizers import Tokenizer
 from tokenizers.models import BPE
 from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import Whitespace
+from transformers import RobertaTokenizer
 
 # Setup logging
 logger = logging.getLogger(__file__)
@@ -52,7 +53,8 @@ def parse_args():
     parser.add_argument("--vocab_size", type=int, required=True, help="Size of the vocabulary")
     parser.add_argument("--load_dir", type=str, required=True, help="Directory which has raw data.")
     parser.add_argument("--save_dir", type=str, required=True, help="Directory which will be used to save tokenizer.")
-
+    parser.add_argument("--roberta_tokenizer", action="store_true",
+        help="If set, roberta tokenizer will be trained, otherwise BPE")
     args = parser.parse_args()
 
     return args
@@ -87,10 +89,13 @@ def main():
     # Use vocab_size=args.vocab_size.
     #  The model should converge faster with a smaller vocab size.
 
-
-    tokenizer = Tokenizer(
-        BPE(bos_token=bos_token, eos_token=eos_token, mask_token=mask_token, pad_token=pad_token, cls_token=cls_token,
-            unk_token=unknown_token, additional_special_tokens=tokens_special))
+    if(args.roberta_tokenizer):
+        tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+    else:
+        tokenizer = Tokenizer(
+            BPE(bos_token=bos_token, eos_token=eos_token, mask_token=mask_token, pad_token=pad_token,
+                cls_token=cls_token,
+                unk_token=unknown_token, additional_special_tokens=tokens_special))
     tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
                                    special_tokens=[unknown_token, bos_token, eos_token, mask_token, pad_token,
                                                    cls_token])
