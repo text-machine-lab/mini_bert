@@ -3,7 +3,8 @@ import math
 
 import numpy
 from torch import rand
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BertTokenizer, RobertaForMaskedLM
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BertTokenizer, RobertaForMaskedLM, \
+    AutoModelForSequenceClassification
 
 import random
 
@@ -414,7 +415,7 @@ def main():
     else:
         model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
         config = model.config
-        config.vocab_size = tokenizer.vocab_size
+        config.vocab_size = (tokenizer.vocab_size+1)
         model = RobertaForMaskedLM(config)
     optimizer = torch.optim.AdamW(
         params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, betas=(0.9, args.beta2)
@@ -484,39 +485,11 @@ def main():
                     step=global_step,
                 )
 
-            if (
-                    global_step % args.eval_every_steps == 0
-                    or global_step == args.max_train_steps
-            ):
-                (
-                    metric,
-                ) = train_wnli.evaluate(
-                    model=model,
-                    eval_dataloader=eval_dataloader,
-                    device=device,
-                    task=args.dataset_attribute,
-                )
-
-                wandb.log(
-                    {
-                        "eval metric": metric,
-                    },
-                    step=global_step,
-                )
-                if global_step >= args.max_train_steps:
-                    break
-
-                if global_step % args.eval_every_steps == 0:
-                    metrics = evaluate(model=model,
-                                       eval_dataloader=eval_dataloader,
-                                       device=device,
-                                       task=args.dataset_attribute)
-                    wandb.log(metrics, step=global_step)
-
                 logger.info("Saving model checkpoint to %s", args.output_dir)
                 model.save_pretrained(args.output_dir)
 
     logger.info("Final evaluation")
+    model = AutoModelForSequenceClassification.from_pretrained(args.output_dir)
     metrics = evaluate(model=model,
                        eval_dataloader=eval_dataloader,
                        device=device,
