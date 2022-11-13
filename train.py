@@ -490,7 +490,7 @@ def main():
 
     logger.info("Final evaluation")
     model = AutoModelForSequenceClassification.from_pretrained(args.output_dir)
-    metrics = evaluate(model=model,
+    metrics = train_wnli.evaluate(model=model,
                        eval_dataloader=eval_dataloader,
                        device=device,
                        task=args.dataset_attribute)
