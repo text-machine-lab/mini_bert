@@ -99,7 +99,9 @@ def main():
     else:
         tokenizer = Tokenizer(
             BPE(unk_token=unknown_token))
-    tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size)
+    tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
+                                   special_tokens=[unknown_token, bos_token, eos_token, mask_token, pad_token,
+                                                   cls_token])
     tokenizer.pre_tokenizer = Whitespace()
 
     tokenizer.train_from_iterator(iterator, trainer=tokenizer_trainer)
