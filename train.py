@@ -68,7 +68,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_path",
         type=str,
-        default="code_x_glue_ct_code_to_text",
+        default="formatted_data",
         help="path to raw dataset",
     )
 
@@ -83,12 +83,6 @@ def parse_args():
         type=str,
         default="",
         help="path to tokenizer.  If not provided, default BERT tokenizer will be used.",
-    )
-    parser.add_argument(
-        "--model_name",
-        type=str,
-        default="mollypak/bert-model-baby",
-        help="The name of model to be loaded. We will only take the model config.",
     )
 
     parser.add_argument(
