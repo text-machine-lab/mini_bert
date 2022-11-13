@@ -26,7 +26,7 @@ import json
 import logging
 
 import datasets
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 
 import transformers
 from tokenizers import Tokenizer
@@ -49,9 +49,8 @@ transformers.utils.logging.set_verbosity_info()
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a tokenizer")
-
     parser.add_argument("--vocab_size", type=int, required=True, help="Size of the vocabulary")
-    parser.add_argument("--load_dir", type=str, required=True, help="Directory which has raw data.")
+    parser.add_argument("--load_dir", type=str, default="formatted_data", help="path to raw dataset")
     parser.add_argument("--save_dir", type=str, required=True, help="Directory which will be used to save tokenizer.")
     parser.add_argument("--roberta_tokenizer", action="store_true",
         help="If set, roberta tokenizer will be trained, otherwise BPE")
@@ -75,27 +74,25 @@ def main():
     # we need following special tokens
     tokens_special = [f'<extra_id_{i}>' for i in range(0, 100)]
     iterator = []
-    # if args.pre_process_dataset:
-    with open(args.load_dir, 'r') as f:
-        data = json.load(f)
+    if args.pre_process_dataset:
+        with open(args.load_dir, 'r') as f:
+            data = json.load(f)
+    else:
+        data = load_from_disk(args.dataset_path)
+
     for i, k in enumerate(data.keys()):
         iterator.append(data[k]['TEXT'])
 
-    # else:
-    #     raw_datasets = load_dataset('json', args.load_dir)
-    #     iterator = (item["text"] for item in raw_datasets)
     logger.info(f"Building tokenizer (might take a couple of minutes)")
 
     # Use vocab_size=args.vocab_size.
     #  The model should converge faster with a smaller vocab size.
 
-    if(args.roberta_tokenizer):
+    if args.roberta_tokenizer:
         tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
     else:
         tokenizer = Tokenizer(
-            BPE(bos_token=bos_token, eos_token=eos_token, mask_token=mask_token, pad_token=pad_token,
-                cls_token=cls_token,
-                unk_token=unknown_token, additional_special_tokens=tokens_special))
+            BPE(unk_token=unknown_token))
     tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
                                    special_tokens=[unknown_token, bos_token, eos_token, mask_token, pad_token,
                                                    cls_token])
