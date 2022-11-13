@@ -84,7 +84,7 @@ def main():
         with open(args.load_dir, 'r') as f:
             data = json.load(f)
     else:
-        data = load_from_disk(args.dataset_path)
+        data = load_from_disk(args.load_dir)
 
     for i, k in enumerate(data.keys()):
         iterator.append(data[k]['TEXT'])
