@@ -53,8 +53,10 @@ def parse_args():
     parser.add_argument("--vocab_size", type=int, required=True, help="Size of the vocabulary")
     parser.add_argument("--load_dir", type=str, default="formatted_data", help="path to raw dataset")
     parser.add_argument("--save_dir", type=str, required=True, help="Directory which will be used to save tokenizer.")
-    parser.add_argument("--roberta_tokenizer", action="store_true",
-        help="If set, roberta tokenizer will be trained, otherwise BPE")
+    parser.add_argument("--byte_level", action="store_true",
+        help="If set, byte_level will be trained, otherwise BPE")
+    parser.add_argument("--sentence_piece", action="store_true",
+        help="If set, sentence_piece will be trained, otherwise BPE")
     parser.add_argument(
         "--pre_process_dataset",
         default=False,
