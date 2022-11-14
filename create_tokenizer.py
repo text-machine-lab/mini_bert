@@ -97,6 +97,7 @@ def main():
     if args.roberta_tokenizer:
         tokenizer = AutoTokenizer.from_pretrained("roberta-base")
         tokenizer.train_new_from_iterator(iterator, vocab_size=args.vocab_size)
+        tokenizer.save(args.save_dir)
     else:
         tokenizer = Tokenizer(BPE(unk_token=unknown_token))
         tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
@@ -104,17 +105,16 @@ def main():
                                                    cls_token])
         tokenizer.pre_tokenizer = Whitespace()
         tokenizer.train_from_iterator(iterator, trainer=tokenizer_trainer)
-    # YOUR CODE ENDS HERE
 
     # wrap the tokenizer to make it usable in HuggingFace Transformers
-    tokenizer = transformers.PreTrainedTokenizerFast(tokenizer_object=tokenizer, unk_token= unknown_token,
-                                                     bos_token=bos_token,
-                                                     eos_token=eos_token,
-                                                     mask_token=mask_token,
-                                                     pad_token=pad_token,
-                                                   cls_token=cls_token)
-    logger.info(f"Saving tokenizer to {args.save_dir}")
-    tokenizer.save_pretrained(args.save_dir)
+        tokenizer = transformers.PreTrainedTokenizerFast(tokenizer_object=tokenizer, unk_token= unknown_token,
+                                                         bos_token=bos_token,
+                                                         eos_token=eos_token,
+                                                         mask_token=mask_token,
+                                                         pad_token=pad_token,
+                                                        cls_token=cls_token)
+        logger.info(f"Saving tokenizer to {args.save_dir}")
+        tokenizer.save_pretrained(args.save_dir)
 
 
 if __name__ == "__main__":
