@@ -99,26 +99,26 @@ def main():
 
     if args.byte_level:
         tokenizer = ByteLevelBPETokenizer()
-
+        tokenizer.train_from_iterator(iterator)
     else:
         if args.sentence_piece:
             tokenizer= SentencePieceBPETokenizer()
+            tokenizer.train_from_iterator(iterator)
         else:
             tokenizer = Tokenizer(BPE(unk_token=unknown_token))
+            tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
+                                           special_tokens=[unknown_token, bos_token, eos_token, mask_token, pad_token,
+                                                           cls_token])
+            tokenizer.pre_tokenizer = Whitespace()
+            tokenizer.train_from_iterator(iterator, trainer=tokenizer_trainer)
 
-    tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
-                                   special_tokens=[unknown_token, bos_token, eos_token, mask_token, pad_token,
-                                                   cls_token])
-    tokenizer.pre_tokenizer = Whitespace()
-    tokenizer.train_from_iterator(iterator, trainer=tokenizer_trainer)
-
-    # wrap the tokenizer to make it usable in HuggingFace Transformers
-    tokenizer = transformers.PreTrainedTokenizerFast(tokenizer_object=tokenizer, unk_token= unknown_token,
-                                                         bos_token=bos_token,
-                                                         eos_token=eos_token,
-                                                         mask_token=mask_token,
-                                                         pad_token=pad_token,
-                                                        cls_token=cls_token)
+            # wrap the tokenizer to make it usable in HuggingFace Transformers
+            tokenizer = transformers.PreTrainedTokenizerFast(tokenizer_object=tokenizer, unk_token= unknown_token,
+                                                                 bos_token=bos_token,
+                                                                 eos_token=eos_token,
+                                                                 mask_token=mask_token,
+                                                                 pad_token=pad_token,
+                                                                cls_token=cls_token)
     logger.info(f"Saving tokenizer to {args.save_dir}")
     tokenizer.save_pretrained(args.save_dir)
 
