@@ -255,10 +255,10 @@ def preprocess_function(
     rand_mask = torch.rand(model_inputs.labels.shape)
     # where the random array is less than 0.15, we set true
     # all tokens upto id 104 are special tokens.  id 2 is the <mask> token
-    mask_arr = (rand_mask < masked_percent) * (model_inputs.input_ids > 104)
+    mask_arr = (rand_mask < masked_percent)
     selection = torch.flatten((mask_arr[0]).nonzero()).tolist()
     # 2 is the masked token
-    model_inputs.input_ids[0, selection] = 2
+    model_inputs.input_ids[0, selection] = tokenizer.encode(tokenizer.mask_token)
 
     # print(f"input size {model_inputs['input_ids'].shape}  label shape {model_inputs['labels'].shape}")
 
