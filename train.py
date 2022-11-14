@@ -136,7 +136,7 @@ def parse_args():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=8,
+        default=512,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
@@ -493,7 +493,7 @@ def main():
 
     logger.info("Final evaluation")
     model = AutoModelForSequenceClassification.from_pretrained(args.output_dir)
-    model= model.to(device)
+    model = model.to(device)
     metrics = train_wnli.evaluate(model=model,
                                   eval_dataloader=eval_dataloader,
                                   device=device,
