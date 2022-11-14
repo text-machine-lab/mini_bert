@@ -128,7 +128,11 @@ def main():
                                                      pad_token=pad_token,
                                                      cls_token=cls_token)
     logger.info(f"Saving tokenizer to {args.save_dir}")
-    tokenizer.save_pretrained(args.save_dir)
+    try:
+        tokenizer.save_pretrained(args.save_dir)
+    except:
+        #this might be roberta
+        tokenizer.save_model(args.save_dir)
 
 
 if __name__ == "__main__":
