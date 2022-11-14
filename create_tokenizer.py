@@ -120,19 +120,19 @@ def main():
         tokenizer.pre_tokenizer = Whitespace()
         tokenizer.train_from_iterator(iterator, trainer=tokenizer_trainer)
 
-    # wrap the tokenizer to make it usable in HuggingFace Transformers
-    tokenizer = transformers.PreTrainedTokenizerFast(tokenizer_object=tokenizer, unk_token=unknown_token,
-                                                     bos_token=bos_token,
-                                                     eos_token=eos_token,
-                                                     mask_token=mask_token,
-                                                     pad_token=pad_token,
-                                                     cls_token=cls_token)
-    logger.info(f"Saving tokenizer to {args.save_dir}")
-    try:
+    if args.tokenizer_type == "roberta":
+        tokenizer.save(args.save_dir)
+    else:
+        # wrap the tokenizer to make it usable in HuggingFace Transformers
+        tokenizer = transformers.PreTrainedTokenizerFast(tokenizer_object=tokenizer, unk_token=unknown_token,
+                                                         bos_token=bos_token,
+                                                         eos_token=eos_token,
+                                                         mask_token=mask_token,
+                                                         pad_token=pad_token,
+                                                         cls_token=cls_token)
+        logger.info(f"Saving tokenizer to {args.save_dir}")
         tokenizer.save_pretrained(args.save_dir)
-    except:
-        #this might be roberta
-        tokenizer.save_model(args.save_dir)
+
 
 
 if __name__ == "__main__":
