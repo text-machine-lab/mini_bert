@@ -96,19 +96,23 @@ def main():
     #  The model should converge faster with a smaller vocab size.
 
     if args.tokenizer_type == "roberta":
+        print("training roberta tokenizer on our dataset")
         tokenizer = AutoTokenizer.from_pretrained('roberta-base')
         tokenizer.train_new_from_iterator(iterator, vocab_size=args.vocab_size)
         logger.info(f"Saving tokenizer to {args.save_dir}")
 
     elif args.tokenizer_type == "byte_level":
+        print("training bytelevel bpe tokenizer on our dataset")
         tokenizer = ByteLevelBPETokenizer()
         tokenizer.train_from_iterator(iterator, vocab_size=args.vocab_size)
         logger.info(f"Saving tokenizer to {args.save_dir}")
     elif args.tokenizer_type == "sentence_piece":
+        print("training sentence piece bpe tokenizer on our dataset")
         tokenizer = SentencePieceBPETokenizer()
         tokenizer.train_from_iterator(iterator, vocab_size=args.vocab_size)
         logger.info(f"Saving tokenizer to {args.save_dir}")
     else:
+        print("training BPE tokenizer on our dataset")
         tokenizer = Tokenizer(BPE(unk_token=unknown_token))
         tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
                                        special_tokens=[unknown_token, bos_token, eos_token, mask_token, pad_token,
