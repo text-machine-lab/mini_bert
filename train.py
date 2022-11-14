@@ -416,9 +416,8 @@ def main():
     else:
         model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
         config = model.config
-        config.vocab_size = (tokenizer.vocab_size+1)
+        config.vocab_size = (tokenizer.vocab_size + 1)
         model = RobertaForMaskedLM(config)
-
 
     num_update_steps_per_epoch = len(train_dataloader)
     if args.max_train_steps is None:
@@ -428,13 +427,9 @@ def main():
             args.max_train_steps / num_update_steps_per_epoch
         )
 
-
-
     optimizer = torch.optim.AdamW(
         params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, betas=(0.9, args.beta2)
     )
-
-
 
     def inverse_sqrt_w_warmup(step):
         if step < args.num_warmup_steps:
@@ -498,10 +493,11 @@ def main():
 
     logger.info("Final evaluation")
     model = AutoModelForSequenceClassification.from_pretrained(args.output_dir)
+    model= model.to(device)
     metrics = train_wnli.evaluate(model=model,
-                       eval_dataloader=eval_dataloader,
-                       device=device,
-                       task=args.dataset_attribute)
+                                  eval_dataloader=eval_dataloader,
+                                  device=device,
+                                  task=args.dataset_attribute)
     wandb.log(metrics, step=global_step)
 
     logger.info("Saving final model checkpoint to %s", args.output_dir)
