@@ -53,10 +53,8 @@ def parse_args():
     parser.add_argument("--vocab_size", type=int, required=True, help="Size of the vocabulary")
     parser.add_argument("--load_dir", type=str, default="formatted_data", help="path to raw dataset")
     parser.add_argument("--save_dir", type=str, required=True, help="Directory which will be used to save tokenizer.")
-    parser.add_argument("--byte_level", action="store_true",
-        help="If set, byte_level will be trained, otherwise BPE")
-    parser.add_argument("--sentence_piece", action="store_true",
-        help="If set, sentence_piece will be trained, otherwise BPE")
+    parser.add_argument("--tokenizer_type", type=str, default="BPE", required=True,
+                        help="type of tokenizer to be trained choose from roberta, byte_level, sentence_piece, otherwise BPE")
     parser.add_argument(
         "--pre_process_dataset",
         default=False,
@@ -97,30 +95,34 @@ def main():
     # Use vocab_size=args.vocab_size.
     #  The model should converge faster with a smaller vocab size.
 
-    if args.byte_level:
+    if args.tokenizer_type == "roberta":
+        tokenizer = AutoTokenizer.from_pretrained('roberta-base')
+        tokenizer.train_new_from_iterator(iterator, vocab_size=args.vocab_size)
+        logger.info(f"Saving tokenizer to {args.save_dir}")
+
+    elif args.tokenizer_type == "byte_level":
         tokenizer = ByteLevelBPETokenizer()
         tokenizer.train_from_iterator(iterator, vocab_size=args.vocab_size)
         logger.info(f"Saving tokenizer to {args.save_dir}")
+    elif args.tokenizer_type == "sentence_piece":
+        tokenizer = SentencePieceBPETokenizer()
+        tokenizer.train_from_iterator(iterator, vocab_size=args.vocab_size)
+        logger.info(f"Saving tokenizer to {args.save_dir}")
     else:
-        if args.sentence_piece:
-            tokenizer= SentencePieceBPETokenizer()
-            tokenizer.train_from_iterator(iterator, vocab_size=args.vocab_size)
-            logger.info(f"Saving tokenizer to {args.save_dir}")
-        else:
-            tokenizer = Tokenizer(BPE(unk_token=unknown_token))
-            tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
-                                           special_tokens=[unknown_token, bos_token, eos_token, mask_token, pad_token,
-                                                           cls_token])
-            tokenizer.pre_tokenizer = Whitespace()
-            tokenizer.train_from_iterator(iterator, trainer=tokenizer_trainer)
+        tokenizer = Tokenizer(BPE(unk_token=unknown_token))
+        tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
+                                       special_tokens=[unknown_token, bos_token, eos_token, mask_token, pad_token,
+                                                       cls_token])
+        tokenizer.pre_tokenizer = Whitespace()
+        tokenizer.train_from_iterator(iterator, trainer=tokenizer_trainer)
 
-            # wrap the tokenizer to make it usable in HuggingFace Transformers
-    tokenizer = transformers.PreTrainedTokenizerFast(tokenizer_object=tokenizer, unk_token= unknown_token,
-                                                         bos_token=bos_token,
-                                                         eos_token=eos_token,
-                                                         mask_token=mask_token,
-                                                         pad_token=pad_token,
-                                                        cls_token=cls_token)
+    # wrap the tokenizer to make it usable in HuggingFace Transformers
+    tokenizer = transformers.PreTrainedTokenizerFast(tokenizer_object=tokenizer, unk_token=unknown_token,
+                                                     bos_token=bos_token,
+                                                     eos_token=eos_token,
+                                                     mask_token=mask_token,
+                                                     pad_token=pad_token,
+                                                     cls_token=cls_token)
     logger.info(f"Saving tokenizer to {args.save_dir}")
     tokenizer.save_pretrained(args.save_dir)
 
