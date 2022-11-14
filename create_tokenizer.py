@@ -99,12 +99,12 @@ def main():
 
     if args.byte_level:
         tokenizer = ByteLevelBPETokenizer()
-        tokenizer.train_from_iterator(iterator)
+        tokenizer.train_from_iterator(iterator, vocab_size=args.vocab_size)
         logger.info(f"Saving tokenizer to {args.save_dir}")
     else:
         if args.sentence_piece:
             tokenizer= SentencePieceBPETokenizer()
-            tokenizer.train_from_iterator(iterator)
+            tokenizer.train_from_iterator(iterator, vocab_size=args.vocab_size)
             logger.info(f"Saving tokenizer to {args.save_dir}")
         else:
             tokenizer = Tokenizer(BPE(unk_token=unknown_token))
