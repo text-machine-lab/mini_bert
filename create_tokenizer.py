@@ -30,7 +30,7 @@ from datasets import load_dataset, load_from_disk
 
 import transformers
 from tokenizers import Tokenizer
-from tokenizers.implementations import ByteLevelBPETokenizer
+from tokenizers.implementations import ByteLevelBPETokenizer, SentencePieceBPETokenizer
 from tokenizers.models import BPE
 from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import Whitespace
@@ -95,11 +95,14 @@ def main():
     # Use vocab_size=args.vocab_size.
     #  The model should converge faster with a smaller vocab size.
 
-    if args.roberta_tokenizer:
-        tokenizer = Tokenizer(ByteLevelBPETokenizer(unk_token=unknown_token))
+    if args.byte_level:
+        tokenizer = ByteLevelBPETokenizer(unk_token=unknown_token)
 
     else:
-        tokenizer = Tokenizer(BPE(unk_token=unknown_token))
+        if args.sentence_piece:
+            tokenizer= SentencePieceBPETokenizer(unk_token=unknown_token)
+        else:
+            tokenizer = Tokenizer(BPE(unk_token=unknown_token))
 
     tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
                                    special_tokens=[unknown_token, bos_token, eos_token, mask_token, pad_token,
@@ -114,8 +117,8 @@ def main():
                                                          mask_token=mask_token,
                                                          pad_token=pad_token,
                                                         cls_token=cls_token)
-        logger.info(f"Saving tokenizer to {args.save_dir}")
-        tokenizer.save_pretrained(args.save_dir)
+    logger.info(f"Saving tokenizer to {args.save_dir}")
+    tokenizer.save_pretrained(args.save_dir)
 
 
 if __name__ == "__main__":
