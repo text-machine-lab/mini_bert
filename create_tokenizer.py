@@ -100,10 +100,14 @@ def main():
     if args.byte_level:
         tokenizer = ByteLevelBPETokenizer()
         tokenizer.train_from_iterator(iterator)
+        logger.info(f"Saving tokenizer to {args.save_dir}")
+        tokenizer.save(args.save_dir)
     else:
         if args.sentence_piece:
             tokenizer= SentencePieceBPETokenizer()
             tokenizer.train_from_iterator(iterator)
+            logger.info(f"Saving tokenizer to {args.save_dir}")
+            tokenizer.save(args.save_dir)
         else:
             tokenizer = Tokenizer(BPE(unk_token=unknown_token))
             tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
@@ -119,8 +123,8 @@ def main():
                                                                  mask_token=mask_token,
                                                                  pad_token=pad_token,
                                                                 cls_token=cls_token)
-    logger.info(f"Saving tokenizer to {args.save_dir}")
-    tokenizer.save_pretrained(args.save_dir)
+            logger.info(f"Saving tokenizer to {args.save_dir}")
+            tokenizer.save_pretrained(args.save_dir)
 
 
 if __name__ == "__main__":
