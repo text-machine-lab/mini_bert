@@ -98,11 +98,11 @@ def main():
     #  The model should converge faster with a smaller vocab size.
 
     if args.byte_level:
-        tokenizer = ByteLevelBPETokenizer(unk_token=unknown_token)
+        tokenizer = ByteLevelBPETokenizer()
 
     else:
         if args.sentence_piece:
-            tokenizer= SentencePieceBPETokenizer(unk_token=unknown_token)
+            tokenizer= SentencePieceBPETokenizer()
         else:
             tokenizer = Tokenizer(BPE(unk_token=unknown_token))
 
