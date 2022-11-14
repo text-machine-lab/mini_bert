@@ -3,6 +3,7 @@ import math
 
 import numpy
 from torch import rand
+from torch.optim.lr_scheduler import LambdaLR
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, RobertaTokenizerFast, RobertaForMaskedLM, \
     AutoModelForSequenceClassification
 
@@ -153,7 +154,7 @@ def parse_args():
     parser.add_argument(
         "--learning_rate",
         type=float,
-        default=5e-5,
+        default=0.01,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument(
@@ -417,9 +418,7 @@ def main():
         config = model.config
         config.vocab_size = (tokenizer.vocab_size+1)
         model = RobertaForMaskedLM(config)
-    optimizer = torch.optim.AdamW(
-        params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, betas=(0.9, args.beta2)
-    )
+
 
     num_update_steps_per_epoch = len(train_dataloader)
     if args.max_train_steps is None:
@@ -429,12 +428,21 @@ def main():
             args.max_train_steps / num_update_steps_per_epoch
         )
 
-    lr_scheduler = transformers.get_scheduler(
-        name=args.lr_scheduler_type,
-        optimizer=optimizer,
-        num_warmup_steps=args.num_warmup_steps,
-        num_training_steps=args.max_train_steps,
+
+
+    optimizer = torch.optim.AdamW(
+        params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, betas=(0.9, args.beta2)
     )
+
+
+
+    def inverse_sqrt_w_warmup(step):
+        if step < args.num_warmup_steps:
+            return (args.num_warmup_steps - step) / args.num_warmup_steps
+
+        return step ** -0.5
+
+    lr_scheduler = LambdaLR(optimizer, lr_lambda=inverse_sqrt_w_warmup)
     wandb.watch(model)
     # Train!
     logger.info("***** Running training *****")

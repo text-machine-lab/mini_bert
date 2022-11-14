@@ -337,7 +337,7 @@ def main():
 
     # raw_datasets = load_dataset(args.dataset_path, args.dataset_attribute)
     # print(f"dataset keys {raw_datasets.keys()}")
-    train_data, eval_data = prep_dataset(tokenizer, args)
+    train_data, eval_data = prep_dataset(tokenizer, args.dataset_attribute, args.batch_size, args.sample_size, args.debug)
     model = AutoModelForSequenceClassification.from_pretrained(args.output_dir)
 
     optimizer = torch.optim.AdamW(
