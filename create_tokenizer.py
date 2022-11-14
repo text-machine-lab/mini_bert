@@ -33,7 +33,7 @@ from tokenizers import Tokenizer
 from tokenizers.models import BPE
 from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import Whitespace
-from transformers import RobertaTokenizer
+from transformers import RobertaTokenizer, AutoTokenizer
 
 # Setup logging
 logger = logging.getLogger(__file__)
@@ -95,16 +95,15 @@ def main():
     #  The model should converge faster with a smaller vocab size.
 
     if args.roberta_tokenizer:
-        tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+        tokenizer = AutoTokenizer.from_pretrained("roberta-base")
+        tokenizer.train_new_from_iterator(iterator, vocab_size=args.vocab_size)
     else:
-        tokenizer = Tokenizer(
-            BPE(unk_token=unknown_token))
-    tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
+        tokenizer = Tokenizer(BPE(unk_token=unknown_token))
+        tokenizer_trainer = BpeTrainer(vocab_size=args.vocab_size,
                                    special_tokens=[unknown_token, bos_token, eos_token, mask_token, pad_token,
                                                    cls_token])
-    tokenizer.pre_tokenizer = Whitespace()
-
-    tokenizer.train_from_iterator(iterator, trainer=tokenizer_trainer)
+        tokenizer.pre_tokenizer = Whitespace()
+        tokenizer.train_from_iterator(iterator, trainer=tokenizer_trainer)
     # YOUR CODE ENDS HERE
 
     # wrap the tokenizer to make it usable in HuggingFace Transformers
