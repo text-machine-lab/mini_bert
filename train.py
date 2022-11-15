@@ -258,7 +258,7 @@ def preprocess_function(
     mask_arr = (rand_mask < masked_percent)
     selection = torch.flatten((mask_arr[0]).nonzero()).tolist()
     # 2 is the masked token
-    model_inputs.input_ids[0, selection] = tokenizer.encode(tokenizer.mask_token)
+    model_inputs.input_ids[0, selection] = tokenizer.encode(tokenizer.mask_token)[0]
 
     # print(f"input size {model_inputs['input_ids'].shape}  label shape {model_inputs['labels'].shape}")
 
