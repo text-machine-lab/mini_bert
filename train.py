@@ -416,7 +416,7 @@ def main():
     else:
         model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
         config = model.config
-        config.vocab_size = (tokenizer.vocab_size + 1)
+        config.vocab_size = len(tokenizer.vocab_size) + 1
         model = RobertaForMaskedLM(config)
 
     num_update_steps_per_epoch = len(train_dataloader)
