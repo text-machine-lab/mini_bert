@@ -428,7 +428,7 @@ def main():
         )
 
     optimizer = torch.optim.AdamW(
-        params=model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, betas=(0.9, args.beta2)
+        params=model.parameters(), lr=args.learning_rate, betas=(0.9, args.beta2)
     )
 
     def inverse_sqrt_w_warmup(step):
