@@ -293,8 +293,7 @@ def make_dataloader(dataset, sentence1_key, sentence2_key, batch_size, data_coll
 
 
 def prep_dataset(tokenizer, dataset_attribute, batch_size, sample_size, debug=False):
-    filtered_dataset=utils.filter_glue_dataset(dataset_name=dataset_attribute)
-
+    filtered_dataset = utils.filter_glue_dataset(dataset_name=dataset_attribute)
 
     if debug:
         filtered_dataset = utils.sample_small_debug_dataset(
@@ -337,7 +336,8 @@ def main():
 
     # raw_datasets = load_dataset(args.dataset_path, args.dataset_attribute)
     # print(f"dataset keys {raw_datasets.keys()}")
-    train_data, eval_data = prep_dataset(tokenizer, args.dataset_attribute, args.batch_size, args.sample_size, args.debug)
+    train_data, eval_data = prep_dataset(tokenizer, args.dataset_attribute, args.batch_size, args.sample_size,
+                                         args.debug)
     model = AutoModelForSequenceClassification.from_pretrained(args.output_dir)
 
     optimizer = torch.optim.AdamW(
@@ -447,5 +447,113 @@ def main():
 if __name__ == "__main__":
     main()
 
+
 # https://github.com/zfjsail/gae-pytorch
 # file:///C:/Users/shree/Downloads/1611.07308.pdf
+def train(output_dir, wandb, glue_train_dataloader, glue_eval_dataloader, device, task, learning_rate, beta_2,
+          max_train_steps=None, num_train_epochs=1, num_warmup_steps=100, batch_size=8, logging_steps=10,
+          eval_every_steps=500):
+    model = AutoModelForSequenceClassification.from_pretrained(output_dir)
+
+    optimizer = torch.optim.AdamW(
+        params=model.parameters(), lr=learning_rate, betas=(0.9, beta_2)
+    )
+
+    num_update_steps_per_epoch = len(glue_train_dataloader)
+    if max_train_steps is None:
+        max_train_steps = num_train_epochs * num_update_steps_per_epoch
+    else:
+        num_train_epochs = math.ceil(
+            max_train_steps / num_update_steps_per_epoch
+        )
+
+    lr_scheduler = transformers.get_scheduler(
+        name="linear",
+        optimizer=optimizer,
+        num_warmup_steps=num_warmup_steps,
+        num_training_steps=max_train_steps,
+    )
+    logger.info("***** Running glue training *****")
+    logger.info(f"  Num examples = {len(glue_train_dataloader)}")
+    logger.info(f"  Num epochs = {num_train_epochs}")
+    logger.info(f"  Batch size = {batch_size}")
+    logger.info(f"  Total optimization steps = {max_train_steps}")
+    progress_bar = tqdm(range(max_train_steps))
+    global_step = 0
+    model.to(device)
+
+    # Training loop
+    for epoch in range(num_train_epochs):
+        model.train()  # make sure that model is in training mode, e.g. dropout is enabled
+        if global_step >= max_train_steps:
+            break
+        # iterate over batches
+        for batch in glue_train_dataloader:
+            if global_step >= max_train_steps:
+                break
+
+            batch = {k: v.to(device) for k, v in batch.items()}
+            # ipdb.set_trace()
+
+            loss = model(**batch).loss
+
+            loss.backward()
+            optimizer.step()
+            lr_scheduler.step()
+            optimizer.zero_grad()
+
+            progress_bar.update(1)
+            global_step += 1
+
+            if global_step % logging_steps == 0:
+                # An extra training metric that might be useful for understanding
+                # how well the model is doing on the training set.
+                # Please pay attention to it during training.
+                # If the metric is significantly below 80%, there is a chance of a bug somewhere.
+
+                wandb.log(
+                    {
+                        "train_loss": loss,
+                        "learning_rate": optimizer.param_groups[0]["lr"],
+                        "epoch": epoch,
+                    },
+                    step=global_step,
+                )
+
+            if (
+                    global_step % eval_every_steps == 0
+                    or global_step == max_train_steps
+            ):
+                (
+                    metric_acc
+                ) = evaluate(
+                    model=model,
+                    eval_dataloader=glue_eval_dataloader,
+                    device=device,
+                    task=task
+                )
+
+                wandb.log(
+                    {
+                        "eval/accuracy": metric_acc,
+                    },
+                    step=global_step,
+                )
+                if global_step >= max_train_steps:
+                    break
+
+                if global_step % eval_every_steps == 0:
+                    metrics = evaluate(model, glue_eval_dataloader, device, task=task)
+                    wandb.log(metrics, step=global_step)
+
+                logger.info("Saving model checkpoint to %s", output_dir)
+                model.save_pretrained(output_dir)
+
+    logger.info("Final evaluation")
+    metrics = evaluate(model, glue_eval_dataloader, device, task)
+    wandb.log(metrics, step=global_step)
+
+    logger.info("Saving final model checkpoint to %s", output_dir)
+    model.save_pretrained(output_dir)
+
+    logger.info(f"Script finished successfully, model saved in {output_dir}")

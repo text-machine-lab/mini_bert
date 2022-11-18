@@ -158,10 +158,10 @@ def parse_args():
         help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument(
-        "--weight_decay",
+        "--wnli_learning_rate",
         type=float,
-        default=0.0,
-        help="Weight decay to use.",
+        default=0.01,
+        help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument(
         "--beta2",
@@ -170,10 +170,10 @@ def parse_args():
         help="Beta2 to use for Adam.",
     )
     parser.add_argument(
-        "--dropout_rate",
-        default=0.1,
+        "--wnli_beta2",
         type=float,
-        help="Dropout rate of the Transformer encoder",
+        default=0.999,
+        help="Beta2 to use for Adam.",
     )
     parser.add_argument(
         "--num_train_epochs",
@@ -382,7 +382,7 @@ def main():
     else:
         key = "test"
 
-    _, eval_dataloader = train_wnli.prep_dataset(tokenizer, args.dataset_attribute, args.eval_batch_size,
+    glue_train_dataloader, glue_eval_dataloader = train_wnli.prep_dataset(tokenizer, args.dataset_attribute, args.eval_batch_size,
                                                  args.sample_size, args.debug)
 
     # Log a few random samples from the training set:
@@ -494,8 +494,11 @@ def main():
     logger.info("Final evaluation")
     model = AutoModelForSequenceClassification.from_pretrained(args.output_dir)
     model = model.to(device)
+
+    train_wnli.train(args.output_dir, wandb, glue_train_dataloader, glue_eval_dataloader,
+                     device=device, task=args.dataset_attribute, learning_rate=args.wnli_learning_rate, beta_2=args.wnli_beta2)
     metrics = train_wnli.evaluate(model=model,
-                                  eval_dataloader=eval_dataloader,
+                                  eval_dataloader=glue_eval_dataloader,
                                   device=device,
                                   task=args.dataset_attribute)
     wandb.log(metrics, step=global_step)
