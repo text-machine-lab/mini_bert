@@ -1,12 +1,9 @@
-import copy
 import math
 
-import numpy
-from torch import rand
 from torch.optim.lr_scheduler import LambdaLR
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, RobertaTokenizerFast, RobertaForMaskedLM, \
     AutoModelForSequenceClassification
-
+from pathlib import Path
 import random
 
 from functools import partial
@@ -333,7 +330,10 @@ def evaluate(model, eval_dataloader, device, debug):
 
 def main():
     args = parse_args()
-
+    try:
+        Path(args.out_dir).mkdir(parents=True, exist_ok=True)
+    except:
+        print("error while creating/finding output dir")
     device = args.device
     if args.device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
