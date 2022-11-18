@@ -336,10 +336,7 @@ def evaluate(model, eval_dataloader, device, debug):
 
 def main():
     args = parse_args()
-    try:
-        Path(args.out_dir).mkdir(parents=True, exist_ok=True)
-    except:
-        print("error while creating/finding output dir")
+
     device = args.device
     if args.device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -417,9 +414,15 @@ def main():
     )
 
     wandb.init(project=args.wandb_project, config=args)
+    output_dir = args.output_dir
     if args.restart:
         model = AutoModelForSeq2SeqLM.from_pretrained(args.output_dir)
     else:
+        output_dir = "output_dir/"+wandb.run
+        try:
+            Path(args.out_dir).mkdir(parents=True, exist_ok=True)
+        except:
+            print("error while creating/finding output dir")
         model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
         config = model.config
         config.vocab_size = len(tokenizer) + 1
@@ -494,11 +497,11 @@ def main():
                     step=global_step,
                 )
 
-                logger.info("Saving model checkpoint to %s", args.output_dir)
-                model.save_pretrained(args.output_dir)
+                logger.info("Saving model checkpoint to %s", output_dir)
+                model.save_pretrained(output_dir)
 
     logger.info("Final evaluation")
-    model = AutoModelForSequenceClassification.from_pretrained(args.output_dir)
+    model = AutoModelForSequenceClassification.from_pretrained(output_dir)
     model = model.to(device)
 
     train_wnli.train(args.output_dir, wandb, glue_train_dataloader, glue_eval_dataloader,
@@ -509,10 +512,10 @@ def main():
                                   task=args.dataset_attribute)
     wandb.log(metrics, step=global_step)
 
-    logger.info("Saving final model checkpoint to %s", args.output_dir)
-    model.save_pretrained(args.output_dir)
+    logger.info("Saving final model checkpoint to %s", output_dir)
+    model.save_pretrained(output_dir)
 
-    logger.info(f"Script finished successfully, model saved in {args.output_dir}")
+    logger.info(f"Script finished successfully, model saved in {output_dir}")
 
 
 if __name__ == "__main__":
