@@ -155,7 +155,7 @@ def parse_args():
         help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument(
-        "--wnli_learning_rate",
+        "--glue_learning_rate",
         type=float,
         default=0.01,
         help="Initial learning rate (after the potential warmup period) to use.",
@@ -167,13 +167,19 @@ def parse_args():
         help="Beta2 to use for Adam.",
     )
     parser.add_argument(
-        "--wnli_beta2",
+        "--glue_beta2",
         type=float,
         default=0.999,
         help="Beta2 to use for Adam.",
     )
     parser.add_argument(
         "--num_train_epochs",
+        type=int,
+        default=1,
+        help="Total number of training epochs to perform.",
+    )
+    parser.add_argument(
+        "--glue_epochs",
         type=int,
         default=1,
         help="Total number of training epochs to perform.",
@@ -496,7 +502,7 @@ def main():
     model = model.to(device)
 
     train_wnli.train(args.output_dir, wandb, glue_train_dataloader, glue_eval_dataloader,
-                     device=device, task=args.dataset_attribute, learning_rate=args.wnli_learning_rate, beta_2=args.wnli_beta2)
+                     device=device, task=args.dataset_attribute, learning_rate=args.glue_learning_rate, beta_2=args.glue_beta2, num_train_epochs=args.glue_epochs)
     metrics = train_wnli.evaluate(model=model,
                                   eval_dataloader=glue_eval_dataloader,
                                   device=device,
