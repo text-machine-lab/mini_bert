@@ -452,7 +452,7 @@ if __name__ == "__main__":
 # https://github.com/zfjsail/gae-pytorch
 # file:///C:/Users/shree/Downloads/1611.07308.pdf
 def train(output_dir, wandb, glue_train_dataloader, glue_eval_dataloader, device, task, learning_rate, beta_2,
-          max_train_steps=None, num_train_epochs=1, batch_size=8, logging_steps=10,
+          max_train_steps=None, num_train_epochs=1, batch_size=100, logging_steps=100,
           eval_every_steps=500):
     model = AutoModelForSequenceClassification.from_pretrained(output_dir)
 
