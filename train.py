@@ -420,7 +420,7 @@ def main():
     if args.restart:
         model = AutoModelForSeq2SeqLM.from_pretrained(args.output_dir)
     else:
-        output_dir = "output_dir/"+wandb.run
+        output_dir = "output_dir/"+str(wandb.run.name)
         try:
             Path(args.out_dir).mkdir(parents=True, exist_ok=True)
         except:
