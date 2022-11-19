@@ -3,6 +3,7 @@ import math
 
 import numpy
 from torch import rand
+from torch.optim.lr_scheduler import LambdaLR
 from transformers import AutoTokenizer, BertTokenizer, \
     DataCollatorWithPadding, AutoModelForSequenceClassification
 
@@ -451,13 +452,9 @@ if __name__ == "__main__":
 # https://github.com/zfjsail/gae-pytorch
 # file:///C:/Users/shree/Downloads/1611.07308.pdf
 def train(output_dir, wandb, glue_train_dataloader, glue_eval_dataloader, device, task, learning_rate, beta_2,
-          max_train_steps=None, num_train_epochs=1, num_warmup_steps=100, batch_size=8, logging_steps=10,
+          max_train_steps=None, num_train_epochs=1, batch_size=8, logging_steps=10,
           eval_every_steps=500):
     model = AutoModelForSequenceClassification.from_pretrained(output_dir)
-
-    optimizer = torch.optim.AdamW(
-        params=model.parameters(), lr=learning_rate, betas=(0.9, beta_2)
-    )
 
     num_update_steps_per_epoch = len(glue_train_dataloader)
     if max_train_steps is None:
@@ -467,12 +464,19 @@ def train(output_dir, wandb, glue_train_dataloader, glue_eval_dataloader, device
             max_train_steps / num_update_steps_per_epoch
         )
 
-    lr_scheduler = transformers.get_scheduler(
-        name="linear",
-        optimizer=optimizer,
-        num_warmup_steps=num_warmup_steps,
-        num_training_steps=max_train_steps,
+    num_warmup_steps = max(1000, math.floor((num_update_steps_per_epoch * 5 / 1000)))
+    optimizer = torch.optim.AdamW(
+        params=model.parameters(), lr=learning_rate, betas=(0.9, beta_2)
     )
+
+    def inverse_sqrt_w_warmup(step):
+        if step < num_warmup_steps:
+            return (num_warmup_steps - step) / num_warmup_steps
+
+        return step ** -0.5
+
+    lr_scheduler = LambdaLR(optimizer, lr_lambda=inverse_sqrt_w_warmup)
+
     logger.info("***** Running glue training *****")
     logger.info(f"  Num examples = {len(glue_train_dataloader)}")
     logger.info(f"  Num epochs = {num_train_epochs}")

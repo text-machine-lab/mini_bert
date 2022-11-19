@@ -216,12 +216,6 @@ def parse_args():
             "constant_with_warmup",
         ],
     )
-    parser.add_argument(
-        "--num_warmup_steps",
-        type=int,
-        default=1000,
-        help="Number of steps for the warmup in the lr scheduler.",
-    )
 
     parser.add_argument(
         "--wandb_project",
@@ -387,8 +381,9 @@ def main():
     else:
         key = "test"
 
-    glue_train_dataloader, glue_eval_dataloader = train_wnli.prep_dataset(tokenizer, args.dataset_attribute, args.eval_batch_size,
-                                                 args.sample_size, args.debug)
+    glue_train_dataloader, glue_eval_dataloader = train_wnli.prep_dataset(tokenizer, args.dataset_attribute,
+                                                                          args.eval_batch_size,
+                                                                          args.sample_size, args.debug)
 
     # Log a few random samples from the training set:
     for index in random.sample(range(len(train_dataset)), 2):
@@ -420,7 +415,7 @@ def main():
     if args.restart:
         model = AutoModelForSeq2SeqLM.from_pretrained(args.output_dir)
     else:
-        output_dir = "output_dir/"+str(wandb.run.name)
+        output_dir = "output_dir/" + str(wandb.run.name)
         try:
             Path(args.out_dir).mkdir(parents=True, exist_ok=True)
         except:
@@ -441,10 +436,11 @@ def main():
     optimizer = torch.optim.AdamW(
         params=model.parameters(), lr=args.learning_rate, betas=(0.9, args.beta2)
     )
+    num_warmup_steps = max(1000, math.floor((num_update_steps_per_epoch * 5 / 1000)))
 
     def inverse_sqrt_w_warmup(step):
-        if step < args.num_warmup_steps:
-            return (args.num_warmup_steps - step) / args.num_warmup_steps
+        if step < num_warmup_steps:
+            return (num_warmup_steps - step) / num_warmup_steps
 
         return step ** -0.5
 
@@ -507,7 +503,8 @@ def main():
     model = model.to(device)
 
     train_wnli.train(output_dir, wandb, glue_train_dataloader, glue_eval_dataloader,
-                     device=device, task=args.dataset_attribute, learning_rate=args.glue_learning_rate, beta_2=args.glue_beta2, num_train_epochs=args.glue_epochs)
+                     device=device, task=args.dataset_attribute, learning_rate=args.glue_learning_rate,
+                     beta_2=args.glue_beta2, num_train_epochs=args.glue_epochs)
     metrics = train_wnli.evaluate(model=model,
                                   eval_dataloader=glue_eval_dataloader,
                                   device=device,
