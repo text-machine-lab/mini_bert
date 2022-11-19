@@ -510,6 +510,7 @@ def main():
                     logger.info("Saving model checkpoint to %s", output_dir)
                     model.save_pretrained(output_dir)
 
+    model.save_pretrained(output_dir)
     logger.info("Final evaluation")
     model = AutoModelForSequenceClassification.from_pretrained(output_dir)
     model = model.to(device)
