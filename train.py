@@ -14,7 +14,7 @@ import torch
 
 import transformers
 import datasets
-from datasets import load_from_disk
+from datasets import load_from_disk, DatasetDict
 import logging
 from tqdm.auto import tqdm
 import wandb
@@ -349,6 +349,8 @@ def main():
     # with open(args.dataset_path) as f:
     #    data_list = json.load(f)
     raw_datasets = load_from_disk(args.dataset_path)
+    if not (isinstance(raw_datasets, DatasetDict) and "train" in raw_datasets.keys()):
+        raw_datasets = raw_datasets.train_test_split()
     # print(f"dataset keys {raw_datasets.keys()}")
     if args.debug:
         raw_datasets = utils.sample_small_debug_dataset(
