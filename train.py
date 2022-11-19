@@ -425,7 +425,7 @@ def main():
     else:
         output_dir = "output_dir/" + str(wandb.run.name)
         try:
-            Path(args.out_dir).mkdir(parents=True, exist_ok=True)
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
         except:
             print("error while creating/finding output dir")
         model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
