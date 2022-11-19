@@ -506,7 +506,7 @@ def main():
     model = AutoModelForSequenceClassification.from_pretrained(output_dir)
     model = model.to(device)
 
-    train_wnli.train(args.output_dir, wandb, glue_train_dataloader, glue_eval_dataloader,
+    train_wnli.train(output_dir, wandb, glue_train_dataloader, glue_eval_dataloader,
                      device=device, task=args.dataset_attribute, learning_rate=args.glue_learning_rate, beta_2=args.glue_beta2, num_train_epochs=args.glue_epochs)
     metrics = train_wnli.evaluate(model=model,
                                   eval_dataloader=glue_eval_dataloader,
