@@ -1,25 +1,22 @@
 import math
+import random
+import argparse
+import torch
+import transformers
+import logging
+import wandb
+import utils
+import train_wnli
 
+from evaluate import load
 from torch.optim.lr_scheduler import LambdaLR
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, RobertaTokenizerFast, RobertaForMaskedLM, \
     AutoModelForSequenceClassification
 from pathlib import Path
-import random
-
 from functools import partial
-
 from torch.utils.data import DataLoader
-import argparse
-import torch
-
-import transformers
-import datasets
 from datasets import load_from_disk, DatasetDict
-import logging
 from tqdm.auto import tqdm
-import wandb
-import utils
-import train_wnli
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(
@@ -330,7 +327,7 @@ def evaluate(model, eval_dataloader, device, debug):
 
 def main():
     args = parse_args()
-
+    perplexity = load("perplexity", module_type="metric")
     device = args.device
     if args.device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -342,7 +339,7 @@ def main():
     # TODO make sure data has train and validation sets.
     # with open(args.dataset_path) as f:
     #    data_list = json.load(f)
-    raw_datasets = load_from_disk(args.dataset_path)
+    raw_datasets = DatasetDict.load_from_disk(args.dataset_path)
     if not (isinstance(raw_datasets, DatasetDict) and "train" in raw_datasets.keys()):
         raw_datasets = raw_datasets.train_test_split()
     # print(f"dataset keys {raw_datasets.keys()}")
@@ -381,9 +378,14 @@ def main():
     else:
         key = "test"
 
-    glue_train_dataloader, glue_eval_dataloader = train_wnli.prep_dataset(tokenizer, args.dataset_attribute,
-                                                                          args.eval_batch_size,
-                                                                          args.sample_size, args.debug)
+    eval_dataset = raw_datasets[key].map(
+        preprocess_function_wrapped,
+        batched=True,
+        num_proc=args.preprocessing_num_workers,
+        remove_columns=column_names,
+        load_from_cache_file=not args.overwrite_cache,
+        desc="Running tokenizer on dataset",
+    )
 
     # Log a few random samples from the training set:
     for index in random.sample(range(len(train_dataset)), 2):
@@ -410,6 +412,12 @@ def main():
         batch_size=args.batch_size,
     )
 
+    eval_dataloader = DataLoader(
+        eval_dataset,
+        shuffle=True,
+        collate_fn=collation_function_for_seq2seq_wrapped,
+        batch_size=args.batch_size,
+    )
     wandb.init(project=args.wandb_project, config=args)
     output_dir = args.output_dir
     if args.restart:
@@ -495,12 +503,20 @@ def main():
                     step=global_step,
                 )
 
-                logger.info("Saving model checkpoint to %s", output_dir)
-                model.save_pretrained(output_dir)
+                if global_step % args.eval_every_steps == 0:
+                    metrics = evaluate(model, eval_dataloader, args.device)
+                    wandb.log(metrics, step=global_step)
+
+                    logger.info("Saving model checkpoint to %s", args.output_dir)
+                    model.save_pretrained(args.output_dir)
 
     logger.info("Final evaluation")
     model = AutoModelForSequenceClassification.from_pretrained(output_dir)
     model = model.to(device)
+
+    glue_train_dataloader, glue_eval_dataloader = train_wnli.prep_dataset(tokenizer, args.dataset_attribute,
+                                                                          args.eval_batch_size,
+                                                                          args.sample_size, args.debug)
 
     train_wnli.train(output_dir, wandb, glue_train_dataloader, glue_eval_dataloader,
                      device=device, task=args.dataset_attribute, learning_rate=args.glue_learning_rate,
