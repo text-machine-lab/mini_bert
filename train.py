@@ -316,9 +316,9 @@ def evaluate(model, eval_dataloader, device, debug):
     model.train()
 
     return {
-        "eval/loss": eval_loss,
-        "eval/perplexity": perplexity,
-        "eval/accuracy": accuracy,
+        "mlm/loss": eval_loss,
+        "mlm/perplexity": perplexity,
+        "mlm/accuracy": accuracy,
     }
 
 
