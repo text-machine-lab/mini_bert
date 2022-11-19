@@ -421,7 +421,7 @@ def main():
     wandb.init(project=args.wandb_project, config=args)
     output_dir = args.output_dir
     if args.restart:
-        model = AutoModelForSeq2SeqLM.from_pretrained(args.output_dir)
+        model = AutoModelForSeq2SeqLM.from_pretrained(output_dir)
     else:
         output_dir = "output_dir/" + str(wandb.run.name)
         try:
@@ -507,8 +507,8 @@ def main():
                     metrics = evaluate(model, eval_dataloader, args.device)
                     wandb.log(metrics, step=global_step)
 
-                    logger.info("Saving model checkpoint to %s", args.output_dir)
-                    model.save_pretrained(args.output_dir)
+                    logger.info("Saving model checkpoint to %s", output_dir)
+                    model.save_pretrained(output_dir)
 
     logger.info("Final evaluation")
     model = AutoModelForSequenceClassification.from_pretrained(output_dir)
