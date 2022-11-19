@@ -181,7 +181,7 @@ def parse_args():
     parser.add_argument(
         "--glue_epochs",
         type=int,
-        default=1,
+        default=50,
         help="Total number of training epochs to perform.",
     )
     parser.add_argument(
