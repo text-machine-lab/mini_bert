@@ -87,8 +87,8 @@ def main():
     else:
         data = load_from_disk(args.load_dir)
 
-    for i, k in enumerate(data.keys()):
-        iterator.append(data[k]['TEXT'])
+    for item in data:
+        iterator.append(data['TEXT'])
 
     logger.info(f"Building tokenizer (might take a couple of minutes)")
 
