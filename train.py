@@ -504,7 +504,7 @@ def main():
                 )
 
                 if global_step % args.eval_every_steps == 0:
-                    metrics = evaluate(model, eval_dataloader, args.device)
+                    metrics = evaluate(model, eval_dataloader, device, args.debug)
                     wandb.log(metrics, step=global_step)
 
                     logger.info("Saving model checkpoint to %s", output_dir)
