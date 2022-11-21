@@ -399,9 +399,9 @@ def main():
 
                 wandb.log(
                     {
-                        "train_loss": loss,
-                        "learning_rate": optimizer.param_groups[0]["lr"],
-                        "epoch": epoch,
+                        "fine_tuning_loss": loss,
+                        "fine_tuing_learning_rate": optimizer.param_groups[0]["lr"],
+                        "fine_tuing_epoch": epoch,
                     },
                     step=global_step,
                 )
