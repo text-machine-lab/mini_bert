@@ -241,7 +241,7 @@ def parse_args():
     return args
 
 
-def evaluate_train(model, batch, task):
+def evaluate_batch(model, batch, task):
     # turn on evaluation mode: no dropout
     metric = load_metric("glue", task)
     model.eval()
@@ -429,9 +429,9 @@ def main():
             ):
                 (
                     metric_acc
-                ) = evaluate_train(
+                ) = evaluate_batch(
                     model=model,
-                    eval_dataloader=eval_data,
+                    batch=batch,
                     task=args.dataset_attribute
                 )
 
@@ -530,7 +530,7 @@ def train(output_dir, wandb, glue_train_dataloader, glue_eval_dataloader, device
                 # how well the model is doing on the training set.
                 # Please pay attention to it during training.
                 # If the metric is significantly below 80%, there is a chance of a bug somewhere.
-                metric = evaluate_train(model, batch,  task)
+                metric = evaluate_batch(model, batch,  task)
                 wandb.log(
                     {
                         "glue_train_loss": loss,
