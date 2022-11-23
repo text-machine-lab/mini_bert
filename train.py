@@ -421,7 +421,7 @@ def main():
     wandb.init(project=args.wandb_project, config=args)
     output_dir = args.output_dir
     if args.restart:
-        model = AutoModelForSeq2SeqLM.from_pretrained(output_dir)
+        model = RobertaForMaskedLM.from_pretrained(output_dir)
     else:
         output_dir = "output_dir/" + str(wandb.run.name)
         try:
