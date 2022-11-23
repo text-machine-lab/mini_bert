@@ -530,7 +530,7 @@ def train(output_dir, wandb, glue_train_dataloader, glue_eval_dataloader, device
                 # how well the model is doing on the training set.
                 # Please pay attention to it during training.
                 # If the metric is significantly below 80%, there is a chance of a bug somewhere.
-                metric = evaluate(model, batch, device, task)
+                metric = evaluate_train(model, batch,  task)
                 wandb.log(
                     {
                         "glue_train_loss": loss,
