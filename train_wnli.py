@@ -241,6 +241,23 @@ def parse_args():
     return args
 
 
+def evaluate_train(model, batch, task):
+    # turn on evaluation mode: no dropout
+    metric = load_metric("glue", task)
+    model.eval()
+    average_loss = 0
+    num_batchs = 0
+    with torch.no_grad():
+        model_output = model(**batch)
+
+        logits = model_output.logits
+        preds = torch.argmax(logits, dim=-1)
+        metric.add_batch(predictions=preds, references=batch["labels"])
+    model.train()
+
+    return metric.compute()
+
+
 def evaluate(model, eval_dataloader, device, task):
     # turn on evaluation mode: no dropout
     metric = load_metric("glue", task)
@@ -412,10 +429,9 @@ def main():
             ):
                 (
                     metric_acc
-                ) = evaluate(
+                ) = evaluate_train(
                     model=model,
                     eval_dataloader=eval_data,
-                    device=device,
                     task=args.dataset_attribute
                 )
 
@@ -514,7 +530,7 @@ def train(output_dir, wandb, glue_train_dataloader, glue_eval_dataloader, device
                 # how well the model is doing on the training set.
                 # Please pay attention to it during training.
                 # If the metric is significantly below 80%, there is a chance of a bug somewhere.
-                metric= evaluate(model, batch, device, task)
+                metric = evaluate(model, batch, device, task)
                 wandb.log(
                     {
                         "glue_train_loss": loss,
