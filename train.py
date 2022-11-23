@@ -59,6 +59,12 @@ def parse_args():
         action="store_true",
         help="If experiment was stopped and needs to be restarted",
     )
+    parser.add_argument(
+        "--restart_for_fine_tuning",
+        default=False,
+        action="store_true",
+        help="If experiment was stopped and needs to be restarted",
+    )
 
     # Data arguments
     parser.add_argument(
@@ -420,100 +426,100 @@ def main():
     )
     wandb.init(project=args.wandb_project, config=args)
     output_dir = args.output_dir
-    if args.restart:
-        model = RobertaForMaskedLM.from_pretrained(output_dir)
-    else:
-        output_dir = "output_dir/" + str(wandb.run.name)
-        try:
-            Path(output_dir).mkdir(parents=True, exist_ok=True)
-        except:
-            print("error while creating/finding output dir")
-        model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
-        config = model.config
-        config.vocab_size = len(tokenizer) + 1
-        model = RobertaForMaskedLM(config)
+    if not args.restart_for_fine_tuning:
 
-    num_update_steps_per_epoch = len(train_dataloader)
-    if args.max_train_steps is None:
-        args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
-    else:
-        args.num_train_epochs = math.ceil(
-            args.max_train_steps / num_update_steps_per_epoch
+        if args.restart:
+            model = RobertaForMaskedLM.from_pretrained(output_dir)
+        else:
+            output_dir = "output_dir/" + str(wandb.run.name)
+            try:
+                Path(output_dir).mkdir(parents=True, exist_ok=True)
+            except:
+                print("error while creating/finding output dir")
+            model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
+            config = model.config
+            config.vocab_size = len(tokenizer) + 1
+            model = RobertaForMaskedLM(config)
+
+        num_update_steps_per_epoch = len(train_dataloader)
+        if args.max_train_steps is None:
+            args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
+        else:
+            args.num_train_epochs = math.ceil(
+                args.max_train_steps / num_update_steps_per_epoch
+            )
+
+        optimizer = torch.optim.AdamW(
+            params=model.parameters(), lr=args.learning_rate, betas=(0.9, args.beta2)
         )
+        num_warmup_steps = max(1000, math.floor((num_update_steps_per_epoch * 5 / 1000)))
 
-    optimizer = torch.optim.AdamW(
-        params=model.parameters(), lr=args.learning_rate, betas=(0.9, args.beta2)
-    )
-    num_warmup_steps = max(1000, math.floor((num_update_steps_per_epoch * 5 / 1000)))
+        def inverse_sqrt_w_warmup(step):
+            if step < num_warmup_steps:
+                return (num_warmup_steps - step) / num_warmup_steps
 
-    def inverse_sqrt_w_warmup(step):
-        if step < num_warmup_steps:
-            return (num_warmup_steps - step) / num_warmup_steps
+            return step ** -0.5
 
-        return step ** -0.5
+        lr_scheduler = LambdaLR(optimizer, lr_lambda=inverse_sqrt_w_warmup)
+        wandb.watch(model)
+        # Train!
+        logger.info("***** Running training *****")
+        logger.info(f"  Num examples = {len(train_dataset)}")
+        logger.info(f"  Num epochs = {args.num_train_epochs}")
+        logger.info(f"  Batch size = {args.batch_size}")
+        logger.info(f"  Total optimization steps = {args.max_train_steps}")
+        progress_bar = tqdm(range(args.max_train_steps))
+        global_step = 0
+        model.to(device)
 
-    lr_scheduler = LambdaLR(optimizer, lr_lambda=inverse_sqrt_w_warmup)
-    wandb.watch(model)
-    # Train!
-    logger.info("***** Running training *****")
-    logger.info(f"  Num examples = {len(train_dataset)}")
-    logger.info(f"  Num epochs = {args.num_train_epochs}")
-    logger.info(f"  Batch size = {args.batch_size}")
-    logger.info(f"  Total optimization steps = {args.max_train_steps}")
-    progress_bar = tqdm(range(args.max_train_steps))
-    global_step = 0
-    model.to(device)
-
-    # Training loop
-    for epoch in range(args.num_train_epochs):
-        model.train()  # make sure that model is in training mode, e.g. dropout is enabled
-        if global_step >= args.max_train_steps:
-            break
-        # iterate over batches
-        for batch in train_dataloader:
+        # Training loop
+        for epoch in range(args.num_train_epochs):
+            model.train()  # make sure that model is in training mode, e.g. dropout is enabled
             if global_step >= args.max_train_steps:
                 break
+            # iterate over batches
+            for batch in train_dataloader:
+                if global_step >= args.max_train_steps:
+                    break
 
-            input_ids = batch["input_ids"].to(device)
-            labels = batch["labels"].to(device)
-            # ipdb.set_trace()
-            # print(f"input size {input_ids.shape}  label shape {labels.shape}")
-            loss = model(input_ids=input_ids, labels=labels).loss
+                input_ids = batch["input_ids"].to(device)
+                labels = batch["labels"].to(device)
+                # ipdb.set_trace()
+                # print(f"input size {input_ids.shape}  label shape {labels.shape}")
+                loss = model(input_ids=input_ids, labels=labels).loss
 
-            loss.backward()
-            optimizer.step()
-            lr_scheduler.step()
-            optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                lr_scheduler.step()
+                optimizer.zero_grad()
 
-            progress_bar.update(1)
-            global_step += 1
+                progress_bar.update(1)
+                global_step += 1
 
-            if global_step % args.logging_steps == 0:
-                # An extra training metric that might be useful for understanding
-                # how well the model is doing on the training set.
-                # Please pay attention to it during training.
-                # If the metric is significantly below 80%, there is a chance of a bug somewhere.
+                if global_step % args.logging_steps == 0:
+                    # An extra training metric that might be useful for understanding
+                    # how well the model is doing on the training set.
+                    # Please pay attention to it during training.
+                    # If the metric is significantly below 80%, there is a chance of a bug somewhere.
 
-                wandb.log(
-                    {
-                        "train_loss": loss,
-                        "learning_rate": optimizer.param_groups[0]["lr"],
-                        "epoch": epoch,
-                    },
-                    step=global_step,
-                )
+                    wandb.log(
+                        {
+                            "train_loss": loss,
+                            "learning_rate": optimizer.param_groups[0]["lr"],
+                            "epoch": epoch,
+                        },
+                        step=global_step,
+                    )
 
-                if global_step % args.eval_every_steps == 0:
-                    metrics = evaluate(model, eval_dataloader, device, args.debug)
-                    wandb.log(metrics, step=global_step)
+                    if global_step % args.eval_every_steps == 0:
+                        metrics = evaluate(model, eval_dataloader, device, args.debug)
+                        wandb.log(metrics, step=global_step)
 
-                    logger.info("Saving model checkpoint to %s", output_dir)
-                    model.save_pretrained(output_dir)
+                        logger.info("Saving model checkpoint to %s", output_dir)
+                        model.save_pretrained(output_dir)
 
-    model.save_pretrained(output_dir)
-    logger.info("Final evaluation")
-    model = AutoModelForSequenceClassification.from_pretrained(output_dir)
-    model = model.to(device)
+        model.save_pretrained(output_dir)
+        logger.info("Final evaluation")
 
     glue_train_dataloader, glue_eval_dataloader = train_wnli.prep_dataset(tokenizer, args.dataset_attribute,
                                                                           args.eval_batch_size,
@@ -522,6 +528,9 @@ def main():
     train_wnli.train(output_dir, wandb, glue_train_dataloader, glue_eval_dataloader,
                      device=device, task=args.dataset_attribute, learning_rate=args.glue_learning_rate,
                      beta_2=args.glue_beta2, num_train_epochs=args.glue_epochs)
+    model = AutoModelForSequenceClassification.from_pretrained(output_dir)
+    model = model.to(device)
+
     metrics = train_wnli.evaluate(model=model,
                                   eval_dataloader=glue_eval_dataloader,
                                   device=device,
