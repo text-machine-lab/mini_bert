@@ -546,5 +546,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-# https://github.com/zfjsail/gae-pytorch
-# file:///C:/Users/shree/Downloads/1611.07308.pdf
+# python3 train.py --beta2=0.95 --learning_rate=0.00005 --max_train_steps=1 --restart --output_dir=output_dir/dazzling-haze-202 --tokenizer_path=Sentence_13k --batch_size=10 --glue_learning_rate=0.01 --glue_epochs=100 --restart_for_fine_tuning

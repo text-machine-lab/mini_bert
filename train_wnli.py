@@ -179,7 +179,7 @@ def parse_args():
     parser.add_argument(
         "--eval_every_steps",
         type=int,
-        default=50000,
+        default=500,
         help="Perform evaluation every n network updates.",
     )
     parser.add_argument(
