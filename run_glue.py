@@ -22,7 +22,6 @@ import random
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
-import wandb
 import datasets
 import numpy as np
 from datasets import load_dataset
@@ -218,8 +217,6 @@ def main():
     # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
     send_example_telemetry("run_glue", model_args, data_args)
-    wandb.init(project='run_glue', config={"model_args":model_args, "data_args":data_args, "training_args":training_args})
-    training_args.report_to = "wandb"
     # Setup logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -510,7 +507,6 @@ def main():
     else:
         data_collator = None
 
-    wandb.watch(model)
     # Initialize our Trainer
     trainer = Trainer(
         model=model,
