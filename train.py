@@ -535,7 +535,7 @@ def main():
                                   eval_dataloader=glue_eval_dataloader,
                                   device=device,
                                   task=args.dataset_attribute)
-    wandb.log(metrics, step=global_step)
+    wandb.log(metrics)
 
     logger.info("Saving final model checkpoint to %s", output_dir)
     model.save_pretrained(output_dir)
