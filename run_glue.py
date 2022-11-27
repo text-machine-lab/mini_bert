@@ -218,7 +218,7 @@ def main():
     # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
     send_example_telemetry("run_glue", model_args, data_args)
-    wandb.init(project='run_glue', config=[model_args, data_args, training_args])
+    wandb.init(project='run_glue', config={"model_args":model_args, "data_args":data_args, "training_args":training_args})
     training_args.report_to = "wandb"
     # Setup logging
     logging.basicConfig(
