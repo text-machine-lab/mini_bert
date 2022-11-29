@@ -554,9 +554,6 @@ def main():
                 # @TODO: to average over the accumulation steps or not?
                 loss.backward()
                 if ((global_step%args.grad_acc_steps) == 0) or ((global_step+1) == args.max_train_steps):
-                    print('****************')
-                    print('updating weights')
-                    print('****************')
                     optimizer.step()
                     lr_scheduler.step()
                     optimizer.zero_grad()
