@@ -7,8 +7,9 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
-from transformers import DataCollatorForWholeWordMask
+from transformers import DataCollatorForWholeWordMask, DataCollatorForLanguageModeling
 from tqdm import tqdm
+from sklearn.model_selection import train_test_split
 
 
 class LMDataset(Dataset):
@@ -62,6 +63,7 @@ class LMDataloader():
         batch_size=8,
         validation_size=0.05,
         fixed_seed_val=0,
+        debug=False,
     ):
         
         """
@@ -82,7 +84,7 @@ class LMDataloader():
         - to make it compatible with huggingface 
         
         4. define data collator
-        - in this case we use a predefined collator, DataCollatorForWholeWordMask
+        - in this case we use a predefined collator, DataCollatorForLanguageModeling
         - this data collator only needs 'input_ids' and the 'input_ids' it will create
         'labels' i.e. target sequence for each input sequence
         - 'labels' contain masked token ids and '-100's. '-100' values are there to tell
@@ -103,6 +105,7 @@ class LMDataloader():
             - batch_size: batch size in the dataloader
             - validation_size: size of the validation split of the data
             - fixed_seed_val: seed value
+            - debug: only takes 10 data instances if true
         
         OUTPUT:
             - NONE
@@ -119,6 +122,9 @@ class LMDataloader():
         
         """
         
+        #
+        self.debug = debug
+        self.tokenizer = tokenizer
         
         # covert dictionary of sentences into a list of grouped sentences
         list_data = self.group_sentences(
@@ -147,7 +153,7 @@ class LMDataloader():
         )
         
         # define data collator
-        collator_obj = DataCollatorForWholeWordMask(
+        collator_obj = DataCollatorForLanguageModeling(
             tokenizer=tokenizer,
             mlm=True,
             mlm_probability=mlm_probability,
@@ -203,36 +209,22 @@ class LMDataloader():
         print('splitting data...')
         
         #
-        np.random.seed(fixed_seed_val)
-        valid_indices = np.random.choice(
-            range(len(list_data)), 
-            size=int(validation_size * len(list_data)),
-            replace=False,
+        if self.debug:
+            list_data = list_data[:10]
+        
+        #
+        train_, valid_ = train_test_split(
+            list_data,
+            test_size=validation_size,
+            random_state=fixed_seed_val
         )
         
-        train_indices = list(set(list(range(len(list_data)))) - set(valid_indices))
+        #
+        self.size_train = train_.__len__()
+        self.size_valid = valid_.__len__()
         
         #
-        #print((train_indices.__len__(), val_indices.__len__()))
-        
-        # save size of the data split
-        self.size_train = train_indices.__len__()
-        self.size_valid = valid_indices.__len__()
-        
-        #
-        valid_, train_ = [], [] 
-        idx_ = -1
-        for instance_ in tqdm(list_data):
-            idx_ += 1
-            if idx_ in valid_indices:
-                valid_.append(instance_)
-            else:
-                train_.append(instance_)
-            
-        
-        #
-        assert (len(valid_) + len(train_)) == len(list_data)
-        assert set(valid_indices).union(train_indices) == set(list(range(len(list_data))))
+        #assert (len(valid_) + len(train_)) == len(list_data)
         
         print('done...')
         
@@ -250,7 +242,7 @@ class LMDataloader():
         #
         for split in ['train', 'validation']:
             print(f'\nPrinting examples in the {split} split of the data')
-            for batch in d_.dataloader[split]:
+            for batch in self.dataloader[split]:
                 check_indices = np.random.choice(
                     range(len(batch['input_ids'])), 
                     size=print_examples, 
@@ -260,15 +252,15 @@ class LMDataloader():
                 #
                 for c_idx in check_indices:
                     labels = batch['labels'][c_idx]
-                    in_seq = tokenizer.batch_decode(batch['input_ids'][c_idx])
+                    in_seq = self.tokenizer.batch_decode(batch['input_ids'][c_idx])
                     out_seq = ''
                     masked_words = []
                     
                     #
                     for id_idx, id_ in enumerate(in_seq):
                         if id_ == '<mask>':
-                            out_seq += tokenizer.decode(labels[id_idx]) + ' '
-                            masked_words.append(tokenizer.decode(labels[id_idx]))
+                            out_seq += self.tokenizer.decode(labels[id_idx]) + ' '
+                            masked_words.append(self.tokenizer.decode(labels[id_idx]))
                         else:
                             out_seq += id_ + ' '
 
