@@ -7,11 +7,20 @@ import logging
 import wandb
 import utils
 import train_wnli
+import LMData
+import json
+import time
 
 from evaluate import load
 from torch.optim.lr_scheduler import LambdaLR
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, RobertaTokenizerFast, RobertaForMaskedLM, \
-    AutoModelForSequenceClassification
+from transformers import (
+    AutoTokenizer,
+    AutoConfig,
+    AutoModelForSeq2SeqLM, 
+    RobertaTokenizerFast, 
+    RobertaForMaskedLM,
+    AutoModelForSequenceClassification,
+)
 from pathlib import Path
 from functools import partial
 from torch.utils.data import DataLoader
@@ -79,6 +88,14 @@ def parse_args():
         default="qnli",
         help="glue task to evaluate on",
     )
+    
+    parser.add_argument(
+        "--validation_size",
+        type=float,
+        default=0.05,
+        help="Size of the validation split of the pre-training data",
+    )
+    
     parser.add_argument(
         "--tokenizer_path",
         type=str,
@@ -92,6 +109,14 @@ def parse_args():
         action="store_true",
         help="Whether to use a small subset of the dataset for debugging.",
     )
+    
+    parser.add_argument(
+        "--fixed_seed_val",
+        type=int,
+        default=1,
+        help="Value of the seed to use for data splitting and weights init",
+    )
+
     # Model arguments
     parser.add_argument(
         "--masked_percent",
@@ -142,7 +167,7 @@ def parse_args():
     parser.add_argument(
         "--eval_batch_size",
         type=int,
-        default=8,
+        default=16,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
@@ -154,9 +179,16 @@ def parse_args():
     parser.add_argument(
         "--learning_rate",
         type=float,
-        default=0.01,
-        help="Initial learning rate (after the potential warmup period) to use.",
+        default=0.0005,
+        help="highest learning rate value.",
     )
+    parser.add_argument(
+        "--weight_decay",
+        type=float,
+        default=0.01,
+        help="Weight decay value for AdamW optimizer",
+    )
+    
     parser.add_argument(
         "--glue_learning_rate",
         type=float,
@@ -187,6 +219,14 @@ def parse_args():
         default=20,
         help="Total number of training epochs to perform.",
     )
+
+    parser.add_argument(
+        "--grad_acc_steps",
+        type=int,
+        default=32,
+        help="Accumulate gradient for these many steps",
+    )
+    
     parser.add_argument(
         "--eval_every_steps",
         type=int,
@@ -337,93 +377,129 @@ def main():
     device = args.device
     if args.device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        args.tokenizer_path) if args.tokenizer_path else RobertaTokenizerFast.from_pretrained("roberta-base")
-    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-    # read in data
-    # TODO make sure data has train and validation sets.
-    # with open(args.dataset_path) as f:
-    #    data_list = json.load(f)
-    raw_datasets = DatasetDict.load_from_disk(args.dataset_path)
-    if not (isinstance(raw_datasets, DatasetDict) and "train" in raw_datasets.keys()):
-        raw_datasets = raw_datasets.train_test_split()
-    # print(f"dataset keys {raw_datasets.keys()}")
-    if args.debug:
-        raw_datasets = utils.sample_small_debug_dataset(
-            raw_datasets, args.sample_size
+    
+    
+    #
+    if args.tokenizer_path:
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.tokenizer_path, 
+            #config=AutoConfig.from_pretrained('roberta-base')
         )
-    print("Data loaded")
-    # Preprocessing the datasets.
-    # First we tokenize all the texts.
-    column_names = raw_datasets["train"].column_names
-    print(f"Data column_names{column_names}")
-    print(f"raw dataset keys {raw_datasets.keys()}")
-    preprocess_function_wrapped = partial(
-        preprocess_function,
-        max_seq_length=args.max_seq_length,
-        masked_percent=args.masked_percent,
+    else:
+        #tokenizer = AutoTokenizer.from_pretrained("roberta-base")
+        tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
+    tokenizer.add_special_tokens({'pad_token': '<pad>'})
+    
+    """
+    if False:
+        # read in data
+        # TODO make sure data has train and validation sets.
+        # with open(args.dataset_path) as f:
+        #    data_list = json.load(f)
+        raw_datasets = DatasetDict.load_from_disk(args.dataset_path)
+        if not (isinstance(raw_datasets, DatasetDict) and "train" in raw_datasets.keys()):
+            raw_datasets = raw_datasets.train_test_split()
+        # print(f"dataset keys {raw_datasets.keys()}")
+        if args.debug:
+            raw_datasets = utils.sample_small_debug_dataset(
+                raw_datasets, args.sample_size
+            )
+        print("Data loaded")
+        # Preprocessing the datasets.
+        # First we tokenize all the texts.
+        column_names = raw_datasets["train"].column_names
+        print(f"Data column_names{column_names}")
+        print(f"raw dataset keys {raw_datasets.keys()}")
+        preprocess_function_wrapped = partial(
+            preprocess_function,
+            max_seq_length=args.max_seq_length,
+            masked_percent=args.masked_percent,
+            tokenizer=tokenizer,
+            debug=args.debug,
+        )
+
+        train_dataset = raw_datasets["train"]
+        train_dataset = train_dataset.map(
+            preprocess_function_wrapped,
+            batched=True,
+            num_proc=args.preprocessing_num_workers,
+            remove_columns=column_names,
+            load_from_cache_file=not args.overwrite_cache,
+            desc="Running tokenizer on dataset",
+        )
+        # print(train_dataset.column_names)
+        if "validation" in raw_datasets:
+            key = "validation"
+        else:
+            key = "test"
+
+        eval_dataset = raw_datasets[key].map(
+            preprocess_function_wrapped,
+            batched=True,
+            num_proc=args.preprocessing_num_workers,
+            remove_columns=column_names,
+            load_from_cache_file=not args.overwrite_cache,
+            desc="Running tokenizer on dataset",
+        )
+
+        # Log a few random samples from the training set:
+        for index in random.sample(range(len(train_dataset)), 2):
+            logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
+            logger.info(
+                f"Decoded input_ids: {tokenizer.decode(train_dataset[index]['input_ids'])}"
+            )
+            logger.info(
+                f"Decoded labels: {tokenizer.decode(train_dataset[index]['labels'], clean_up_tokenization_spaces=True)}"
+            )
+            logger.info("\n")
+
+        # import ipdb; ipdb.set_trace()
+        collation_function_for_seq2seq_wrapped = partial(
+            collation_function_for_seq2seq,
+            pad_token_id=tokenizer.pad_token_id,
+        )
+
+        train_dataloader = DataLoader(
+            train_dataset,
+            shuffle=True,
+            collate_fn=collation_function_for_seq2seq_wrapped,
+            batch_size=args.batch_size,
+        )
+
+        eval_dataloader = DataLoader(
+            eval_dataset,
+            shuffle=True,
+            collate_fn=collation_function_for_seq2seq_wrapped,
+            batch_size=args.batch_size,
+        )
+    """
+    
+    # @TODO: This is the newly added part for creating dataloaders.
+    # define dataloader
+    print('Reading data...')
+    with open(args.dataset_path, 'r') as f:
+        data_raw = json.load(f)
+    print('Reading done.')
+
+    #
+    dataloaders = LMData.LMDataloader(
+        dict_data=data_raw,
         tokenizer=tokenizer,
+        mlm_probability=args.masked_percent,
+        max_seq_len=args.max_seq_length,
+        batch_size=args.batch_size,
+        validation_size=args.validation_size,
+        fixed_seed_val=args.fixed_seed_val,
         debug=args.debug,
     )
-
-    train_dataset = raw_datasets["train"]
-
-    train_dataset = train_dataset.map(
-        preprocess_function_wrapped,
-        batched=True,
-        num_proc=args.preprocessing_num_workers,
-        remove_columns=column_names,
-        load_from_cache_file=not args.overwrite_cache,
-        desc="Running tokenizer on dataset",
-    )
-    # print(train_dataset.column_names)
-
-    if "validation" in raw_datasets:
-        key = "validation"
-    else:
-        key = "test"
-
-    eval_dataset = raw_datasets[key].map(
-        preprocess_function_wrapped,
-        batched=True,
-        num_proc=args.preprocessing_num_workers,
-        remove_columns=column_names,
-        load_from_cache_file=not args.overwrite_cache,
-        desc="Running tokenizer on dataset",
-    )
-
-    # Log a few random samples from the training set:
-    for index in random.sample(range(len(train_dataset)), 2):
-        logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
-        logger.info(
-            f"Decoded input_ids: {tokenizer.decode(train_dataset[index]['input_ids'])}"
-        )
-        logger.info(
-            f"Decoded labels: {tokenizer.decode(train_dataset[index]['labels'], clean_up_tokenization_spaces=True)}"
-        )
-        logger.info("\n")
-
-    # import ipdb; ipdb.set_trace()
-
-    collation_function_for_seq2seq_wrapped = partial(
-        collation_function_for_seq2seq,
-        pad_token_id=tokenizer.pad_token_id,
-    )
-
-    train_dataloader = DataLoader(
-        train_dataset,
-        shuffle=True,
-        collate_fn=collation_function_for_seq2seq_wrapped,
-        batch_size=args.batch_size,
-    )
-
-    eval_dataloader = DataLoader(
-        eval_dataset,
-        shuffle=True,
-        collate_fn=collation_function_for_seq2seq_wrapped,
-        batch_size=args.batch_size,
-    )
+    dataloaders.check_dataloader()
+    train_dataloader = dataloaders.dataloader['train']
+    eval_dataloader = dataloaders.dataloader['validation']
+    
+    # define criterion
+    criterion = torch.nn.CrossEntropyLoss(ignore_index=-100)
+    
+    #
     wandb.init(project=args.wandb_project, config=args)
     output_dir = args.output_dir
     if not args.restart_for_fine_tuning:
@@ -436,6 +512,8 @@ def main():
                 Path(output_dir).mkdir(parents=True, exist_ok=True)
             except:
                 print("error while creating/finding output dir")
+            
+            # @TODO: fix weight init            
             model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
             config = model.config
             config.vocab_size = len(tokenizer) + 1
@@ -448,11 +526,15 @@ def main():
             args.num_train_epochs = math.ceil(
                 args.max_train_steps / num_update_steps_per_epoch
             )
-
+        num_warmup_steps = min(5000, math.floor((num_update_steps_per_epoch * 5 / 1000)))
+        
+        # define optimizer
         optimizer = torch.optim.AdamW(
-            params=model.parameters(), lr=args.learning_rate, betas=(0.9, args.beta2)
+            params=model.parameters(), 
+            lr=args.learning_rate, 
+            betas=(0.9, args.beta2),
+            weight_decay=args.weight_decay,
         )
-        num_warmup_steps = max(1000, math.floor((num_update_steps_per_epoch * 5 / 1000)))
 
         def inverse_sqrt_w_warmup(step):
             if step < num_warmup_steps:
@@ -464,7 +546,7 @@ def main():
         wandb.watch(model)
         # Train!
         logger.info("***** Running training *****")
-        logger.info(f"  Num examples = {len(train_dataset)}")
+        logger.info(f"  Num examples = {len(dataloaders.dataset['train'])}")
         logger.info(f"  Num epochs = {args.num_train_epochs}")
         logger.info(f"  Batch size = {args.batch_size}")
         logger.info(f"  Total optimization steps = {args.max_train_steps}")
@@ -477,25 +559,38 @@ def main():
             model.train()  # make sure that model is in training mode, e.g. dropout is enabled
             if global_step >= args.max_train_steps:
                 break
+            
             # iterate over batches
             for batch in train_dataloader:
                 if global_step >= args.max_train_steps:
                     break
-
+                
+                # shift tensors to device
                 input_ids = batch["input_ids"].to(device)
                 labels = batch["labels"].to(device)
                 # ipdb.set_trace()
                 # print(f"input size {input_ids.shape}  label shape {labels.shape}")
-                loss = model(input_ids=input_ids, labels=labels).loss
-
+                outputs = model(input_ids=input_ids, labels=labels)
+                loss = outputs.loss
+                logits = outputs.logits
+                loss_ = criterion(logits, labels)
+                print(((loss - loss_) / loss) * 100)
+                
+                
+                # perform gradient accumulation
+                # @TODO: to average over the accumulation steps or not?
+                loss = loss / args.grad_acc_steps
                 loss.backward()
-                optimizer.step()
-                lr_scheduler.step()
-                optimizer.zero_grad()
-
+                if ((global_step%args.grad_acc_steps) == 0) or ((global_step+1) == args.max_train_steps):
+                    optimizer.step()
+                    lr_scheduler.step()
+                    optimizer.zero_grad()
+                
+                # update progress bar
                 progress_bar.update(1)
                 global_step += 1
 
+                # logging and vizualization
                 if global_step % args.logging_steps == 0:
                     # An extra training metric that might be useful for understanding
                     # how well the model is doing on the training set.
@@ -518,6 +613,7 @@ def main():
                         logger.info("Saving model checkpoint to %s", output_dir)
                         model.save_pretrained(output_dir)
 
+        # load model
         model.save_pretrained(output_dir)
         logger.info("Final evaluation")
 
