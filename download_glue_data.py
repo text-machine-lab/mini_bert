@@ -25,7 +25,8 @@ import tempfile
 import urllib.request
 import zipfile
 
-TASKS = ["CoLA", "SST", "MRPC", "QQP", "STS", "MNLI", "QNLI", "RTE", "WNLI", "diagnostic"]
+#TASKS = ["CoLA", "SST", "MRPC", "QQP", "STS", "MNLI", "QNLI", "RTE", "WNLI", "diagnostic"]
+TASKS = ["CoLA", "SST", "QQP", "STS", "MNLI", "QNLI", "RTE", "WNLI", "diagnostic"]
 TASK2PATH = {"CoLA": 'https://dl.fbaipublicfiles.com/glue/data/CoLA.zip',
              "SST": 'https://dl.fbaipublicfiles.com/glue/data/SST-2.zip',
              "QQP": 'https://dl.fbaipublicfiles.com/glue/data/QQP-clean.zip',
