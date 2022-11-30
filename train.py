@@ -371,90 +371,7 @@ def main():
         args.tokenizer_path) if args.tokenizer_path else RobertaTokenizerFast.from_pretrained("roberta-base")
     tokenizer.add_special_tokens({'pad_token': '<pad>'})
     
-    """
-    if False:
-        # read in data
-        # TODO make sure data has train and validation sets.
-        # with open(args.dataset_path) as f:
-        #    data_list = json.load(f)
-        raw_datasets = DatasetDict.load_from_disk(args.dataset_path)
-        if not (isinstance(raw_datasets, DatasetDict) and "train" in raw_datasets.keys()):
-            raw_datasets = raw_datasets.train_test_split()
-        # print(f"dataset keys {raw_datasets.keys()}")
-        if args.debug:
-            raw_datasets = utils.sample_small_debug_dataset(
-                raw_datasets, args.sample_size
-            )
-        print("Data loaded")
-        # Preprocessing the datasets.
-        # First we tokenize all the texts.
-        column_names = raw_datasets["train"].column_names
-        print(f"Data column_names{column_names}")
-        print(f"raw dataset keys {raw_datasets.keys()}")
-        preprocess_function_wrapped = partial(
-            preprocess_function,
-            max_seq_length=args.max_seq_length,
-            masked_percent=args.masked_percent,
-            tokenizer=tokenizer,
-            debug=args.debug,
-        )
 
-        train_dataset = raw_datasets["train"]
-        train_dataset = train_dataset.map(
-            preprocess_function_wrapped,
-            batched=True,
-            num_proc=args.preprocessing_num_workers,
-            remove_columns=column_names,
-            load_from_cache_file=not args.overwrite_cache,
-            desc="Running tokenizer on dataset",
-        )
-        # print(train_dataset.column_names)
-        if "validation" in raw_datasets:
-            key = "validation"
-        else:
-            key = "test"
-
-        eval_dataset = raw_datasets[key].map(
-            preprocess_function_wrapped,
-            batched=True,
-            num_proc=args.preprocessing_num_workers,
-            remove_columns=column_names,
-            load_from_cache_file=not args.overwrite_cache,
-            desc="Running tokenizer on dataset",
-        )
-
-        # Log a few random samples from the training set:
-        for index in random.sample(range(len(train_dataset)), 2):
-            logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
-            logger.info(
-                f"Decoded input_ids: {tokenizer.decode(train_dataset[index]['input_ids'])}"
-            )
-            logger.info(
-                f"Decoded labels: {tokenizer.decode(train_dataset[index]['labels'], clean_up_tokenization_spaces=True)}"
-            )
-            logger.info("\n")
-
-        # import ipdb; ipdb.set_trace()
-        collation_function_for_seq2seq_wrapped = partial(
-            collation_function_for_seq2seq,
-            pad_token_id=tokenizer.pad_token_id,
-        )
-
-        train_dataloader = DataLoader(
-            train_dataset,
-            shuffle=True,
-            collate_fn=collation_function_for_seq2seq_wrapped,
-            batch_size=args.batch_size,
-        )
-
-        eval_dataloader = DataLoader(
-            eval_dataset,
-            shuffle=True,
-            collate_fn=collation_function_for_seq2seq_wrapped,
-            batch_size=args.batch_size,
-        )
-    """
-    
     # @TODO: This is the newly added part for creating dataloaders.
     # define dataloader
     print('Reading data...')
@@ -551,7 +468,7 @@ def main():
                 loss = model(input_ids=input_ids, labels=labels).loss
                 
                 # perform gradient accumulation
-                # @TODO: to average over the accumulation steps or not?
+                loss /= args.grad_acc_steps
                 loss.backward()
                 if ((global_step%args.grad_acc_steps) == 0) or ((global_step+1) == args.max_train_steps):
                     optimizer.step()
@@ -589,23 +506,6 @@ def main():
         model.save_pretrained(output_dir)
         logger.info("Final evaluation")
 
-    glue_train_dataloader, glue_eval_dataloader = train_wnli.prep_dataset(tokenizer, args.dataset_attribute,
-                                                                          args.eval_batch_size,
-                                                                          args.sample_size, args.debug)
-
-    train_wnli.train(output_dir, wandb, glue_train_dataloader, glue_eval_dataloader,
-                     device=device, task=args.dataset_attribute, learning_rate=args.glue_learning_rate,
-                     beta_2=args.glue_beta2, num_train_epochs=args.glue_epochs)
-    model = AutoModelForSequenceClassification.from_pretrained(output_dir)
-    model = model.to(device)
-
-    metrics = train_wnli.evaluate(model=model,
-                                  eval_dataloader=glue_eval_dataloader,
-                                  device=device,
-                                  task=args.dataset_attribute)
-    wandb.log(metrics)
-
-    logger.info("Saving final model checkpoint to %s", output_dir)
     model.save_pretrained(output_dir)
 
     logger.info(f"Script finished successfully, model saved in {output_dir}")
