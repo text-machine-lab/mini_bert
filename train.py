@@ -182,13 +182,7 @@ def parse_args():
         default=0.0005,
         help="highest learning rate value.",
     )
-    parser.add_argument(
-        "--weight_decay",
-        type=float,
-        default=0.01,
-        help="Weight decay value for AdamW optimizer",
-    )
-    
+
     parser.add_argument(
         "--glue_learning_rate",
         type=float,
@@ -381,12 +375,8 @@ def main():
     
     #
     if args.tokenizer_path:
-        tokenizer = AutoTokenizer.from_pretrained(
-            args.tokenizer_path, 
-            #config=AutoConfig.from_pretrained('roberta-base')
-        )
+        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
     else:
-        #tokenizer = AutoTokenizer.from_pretrained("roberta-base")
         tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
     tokenizer.add_special_tokens({'pad_token': '<pad>'})
     
@@ -412,9 +402,7 @@ def main():
     dataloaders.check_dataloader()
     train_dataloader = dataloaders.dataloader['train']
     eval_dataloader = dataloaders.dataloader['validation']
-    
-    # define criterion
-    criterion = torch.nn.CrossEntropyLoss(ignore_index=-100)
+
     
     #
     wandb.init(project=args.wandb_project, config=args)
@@ -443,15 +431,13 @@ def main():
             args.num_train_epochs = math.ceil(
                 args.max_train_steps / num_update_steps_per_epoch
             )
-        #num_warmup_steps = max(1000, math.floor((num_update_steps_per_epoch * 5 / 1000)))
-        num_warmup_steps = min(5000, math.floor((args.max_train_steps * 5 / 1000)))
-        
+        num_warmup_steps = max(1000, math.floor((num_update_steps_per_epoch * 5 / 1000)))
+
         # define optimizer
         optimizer = torch.optim.AdamW(
             params=model.parameters(), 
             lr=args.learning_rate, 
             betas=(0.9, args.beta2),
-            weight_decay=args.weight_decay,
         )
 
         def inverse_sqrt_w_warmup(step):
@@ -488,22 +474,13 @@ def main():
                 labels = batch["labels"].to(device)
                 # ipdb.set_trace()
                 # print(f"input size {input_ids.shape}  label shape {labels.shape}")
-                outputs = model(input_ids=input_ids, labels=labels)
-                loss = outputs.loss
-                logits = outputs.logits
-                loss_ = criterion(logits, labels)
-                print(((loss - loss_) / loss) * 100)
-                
-                
-                # perform gradient accumulation
-                # @TODO: to average over the accumulation steps or not?
-                loss = loss / args.grad_acc_steps
+                loss = model(input_ids=input_ids, labels=labels).loss
+
                 loss.backward()
-                if ((global_step%args.grad_acc_steps) == 0) or ((global_step+1) == args.max_train_steps):
-                    optimizer.step()
-                    lr_scheduler.step()
-                    optimizer.zero_grad()
-                
+                optimizer.step()
+                lr_scheduler.step()
+                optimizer.zero_grad()
+
                 # update progress bar
                 progress_bar.update(1)
                 global_step += 1
