@@ -496,12 +496,8 @@ def main():
                 
                 
                 # perform gradient accumulation
-<<<<<<< Updated upstream
-                loss /= args.grad_acc_steps
-=======
                 # @TODO: to average over the accumulation steps or not?
                 loss = loss / args.grad_acc_steps
->>>>>>> Stashed changes
                 loss.backward()
                 if ((global_step%args.grad_acc_steps) == 0) or ((global_step+1) == args.max_train_steps):
                     optimizer.step()

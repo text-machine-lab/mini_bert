@@ -44,20 +44,29 @@ def filter_example(example, vocab_set, contractions, additional_exclusions=True)
     return True
         
 
-def filter_glue_dataset(dataset_name, dataset_types=["train", "test", "validation"], aochildes_vocab_path="AOChildes_word_frequency.csv"):
+def filter_glue_dataset(
+    task_name, cache_dir, 
+    use_auth_token=None, 
+    aochildes_vocab_path="AOChildes_word_frequency.csv"
+):
     """Filters GLUE datasets based on AOChildes vocabulary
     Args:
-        dataset_name: name of GLUE dataset
-        dataset_types: train test of validation
+        task_name: name of GLUE dataset
+        cache_dir: dir where data is cached
+        use_auth_token: we will not need this mostly, but used by run_glue script
         aochildes_vocab_path: the path of AOChildes vocabulary
     """
-    datasets = {}
-    for dataset_type in dataset_types:
-        dataset = load_dataset('glue', dataset_name)[dataset_type]
-        vocab_freq = pd.read_csv(aochildes_vocab_path)
-        vocab_set = set(vocab_freq['word'])
-        contractions = set(['nt','s','re','t','d','ll'])
-        datasets[dataset_type] = dataset.filter(lambda example: filter_example(example, vocab_set, contractions))
+    datasets = load_dataset(
+        "glue",
+        task_name,
+        cache_dir=cache_dir,
+        use_auth_token=True if use_auth_token else None,
+    )
+    vocab_freq = pd.read_csv(aochildes_vocab_path)
+    vocab_set = set(vocab_freq['word'])
+    contractions = set(['nt','s','re','t','d','ll'])
+    for key in datasets.keys():
+        datasets[key] = datasets[key].filter(lambda example: filter_example(example, vocab_set, contractions))
     return datasets
 
 def pad(sequence_list, pad_id):
@@ -98,3 +107,5 @@ def sample_small_debug_dataset(raw_datasets, sample_size):
         raw_datasets["test"] = deepcopy(subset)
     return raw_datasets
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)

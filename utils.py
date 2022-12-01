@@ -44,11 +44,11 @@ def filter_example(example, vocab_set, contractions, additional_exclusions=True)
     return True
         
 
-<<<<<<< Updated upstream
-def filter_glue_dataset(task_name, cache_dir, use_auth_token=None, aochildes_vocab_path="../data/AOChildes_word_frequency.csv"):
-=======
-def filter_glue_dataset(dataset_name, dataset_types=["train", "test", "validation"], aochildes_vocab_path="AOChildes_word_frequency.csv"):
->>>>>>> Stashed changes
+def filter_glue_dataset(
+    task_name, cache_dir, 
+    use_auth_token=None, 
+    aochildes_vocab_path="AOChildes_word_frequency.csv"
+):
     """Filters GLUE datasets based on AOChildes vocabulary
     Args:
         task_name: name of GLUE dataset
@@ -107,3 +107,5 @@ def sample_small_debug_dataset(raw_datasets, sample_size):
         raw_datasets["test"] = deepcopy(subset)
     return raw_datasets
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)

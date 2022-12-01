@@ -61,7 +61,7 @@ class LMDataloader():
         mlm_probability,
         max_seq_len,
         batch_size=8,
-        validation_size=0.05,
+        validation_size=0.02,
         fixed_seed_val=0,
         debug=False,
     ):
