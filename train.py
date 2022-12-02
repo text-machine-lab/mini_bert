@@ -264,6 +264,25 @@ def parse_args():
 
     return args
 
+def group_sentences(
+        split,
+        max_len=128,
+        sentence_split_ratio=1.2,
+):
+    print('grouping sentences...')
+    list_out = []
+    cur_sequence = ''
+    idx = 0
+    for item in split:
+        new_sequence = cur_sequence + item['TEXT'] + ' '
+        if (len(new_sequence.split(' ')) * sentence_split_ratio) >= max_len:
+            list_out.append(cur_sequence)
+            cur_sequence = item['TEXT'] + ' '
+        else:
+            cur_sequence = new_sequence
+    print('done')
+
+    return list_out
 
 def preprocess_function(
         examples,
@@ -282,8 +301,8 @@ def preprocess_function(
         :param examples:
         :param use_ast:
     """
-    inputs = examples["TEXT"]
-    model_inputs = tokenizer(inputs, max_length=max_seq_length, padding=True, truncation=True, return_tensors='pt')
+
+    model_inputs = tokenizer(examples, max_length=max_seq_length, padding=True, truncation=True, return_tensors='pt')
     model_inputs['labels'] = model_inputs.input_ids.detach().clone()
 
     rand_mask = torch.rand(model_inputs.labels.shape)
@@ -379,24 +398,86 @@ def main():
         tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
     tokenizer.add_special_tokens({'pad_token': '<pad>'})
 
-    data_raw = DatasetDict.load_from_disk(args.dataset_path)
+    raw_datasets = DatasetDict.load_from_disk(args.dataset_path)
+    if args.debug:
+        raw_datasets = utils.sample_small_debug_dataset(
+            raw_datasets, args.sample_size
+        )
+    raw_datasets = {k: group_sentences(v) for k, v in raw_datasets.items()}
 
-    # 
-    dataloaders = LMData.LMDataloader(
-        dict_data=data_raw,
+
+
+    print("Data loaded")
+    # Preprocessing the datasets.
+    # First we tokenize all the texts.
+    column_names = raw_datasets["train"].column_names
+    print(f"Data column_names{column_names}")
+    print(f"raw dataset keys {raw_datasets.keys()}")
+    preprocess_function_wrapped = partial(
+        preprocess_function,
+        max_seq_length=args.max_seq_length,
+        masked_percent=args.masked_percent,
         tokenizer=tokenizer,
-        mlm_probability=args.masked_percent,
-        max_seq_len=args.max_seq_length,
-        batch_size=args.batch_size,
-        validation_size=args.validation_size,
-        fixed_seed_val=args.fixed_seed_val,
         debug=args.debug,
     )
-    dataloaders.check_dataloader()
-    train_dataloader = dataloaders.dataloader['train']
-    eval_dataloader = dataloaders.dataloader['validation']
 
-    #
+    train_dataset = raw_datasets["train"]
+
+    train_dataset = train_dataset.map(
+        preprocess_function_wrapped,
+        batched=True,
+        num_proc=args.preprocessing_num_workers,
+        remove_columns=column_names,
+        load_from_cache_file=not args.overwrite_cache,
+        desc="Running tokenizer on dataset",
+    )
+    # print(train_dataset.column_names)
+
+    if "validation" in raw_datasets:
+        key = "validation"
+    else:
+        key = "test"
+
+    eval_dataset = raw_datasets[key].map(
+        preprocess_function_wrapped,
+        batched=True,
+        num_proc=args.preprocessing_num_workers,
+        remove_columns=column_names,
+        load_from_cache_file=not args.overwrite_cache,
+        desc="Running tokenizer on dataset",
+    )
+
+    # Log a few random samples from the training set:
+    for index in random.sample(range(len(train_dataset)), 2):
+        logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
+        logger.info(
+            f"Decoded input_ids: {tokenizer.decode(train_dataset[index]['input_ids'])}"
+        )
+        logger.info(
+            f"Decoded labels: {tokenizer.decode(train_dataset[index]['labels'], clean_up_tokenization_spaces=True)}"
+        )
+        logger.info("\n")
+
+    # import ipdb; ipdb.set_trace()
+
+    collation_function_for_seq2seq_wrapped = partial(
+        collation_function_for_seq2seq,
+        pad_token_id=tokenizer.pad_token_id,
+    )
+
+    train_dataloader = DataLoader(
+        train_dataset,
+        shuffle=True,
+        collate_fn=collation_function_for_seq2seq_wrapped,
+        batch_size=args.batch_size,
+    )
+
+    eval_dataloader = DataLoader(
+        eval_dataset,
+        shuffle=True,
+        collate_fn=collation_function_for_seq2seq_wrapped,
+        batch_size=args.batch_size,
+    )
     wandb.init(project=args.wandb_project, config=args)
     output_dir = args.output_dir
     if not args.restart_for_fine_tuning:
@@ -409,8 +490,6 @@ def main():
                 Path(output_dir).mkdir(parents=True, exist_ok=True)
             except:
                 print("error while creating/finding output dir")
-
-            # @TODO: fix weight init            
             model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
             config = model.config
             config.vocab_size = len(tokenizer) + 1
@@ -423,14 +502,11 @@ def main():
             args.num_train_epochs = math.ceil(
                 args.max_train_steps / num_update_steps_per_epoch
             )
-        num_warmup_steps = max(1000, math.floor((num_update_steps_per_epoch * 5 / 1000)))
 
-        # define optimizer
         optimizer = torch.optim.AdamW(
-            params=model.parameters(),
-            lr=args.learning_rate,
-            betas=(0.9, args.beta2),
+            params=model.parameters(), lr=args.learning_rate, betas=(0.9, args.beta2)
         )
+        num_warmup_steps = max(1000, math.floor((num_update_steps_per_epoch * 5 / 1000)))
 
         def inverse_sqrt_w_warmup(step):
             if step < num_warmup_steps:
@@ -442,7 +518,7 @@ def main():
         wandb.watch(model)
         # Train!
         logger.info("***** Running training *****")
-        logger.info(f"  Num examples = {len(dataloaders.dataset['train'])}")
+        logger.info(f"  Num examples = {len(train_dataset)}")
         logger.info(f"  Num epochs = {args.num_train_epochs}")
         logger.info(f"  Batch size = {args.batch_size}")
         logger.info(f"  Total optimization steps = {args.max_train_steps}")
@@ -455,13 +531,11 @@ def main():
             model.train()  # make sure that model is in training mode, e.g. dropout is enabled
             if global_step >= args.max_train_steps:
                 break
-
             # iterate over batches
             for batch in train_dataloader:
                 if global_step >= args.max_train_steps:
                     break
 
-                # shift tensors to device
                 input_ids = batch["input_ids"].to(device)
                 labels = batch["labels"].to(device)
                 # ipdb.set_trace()
@@ -473,11 +547,9 @@ def main():
                 lr_scheduler.step()
                 optimizer.zero_grad()
 
-                # update progress bar
                 progress_bar.update(1)
                 global_step += 1
 
-                # logging and vizualization
                 if global_step % args.logging_steps == 0:
                     # An extra training metric that might be useful for understanding
                     # how well the model is doing on the training set.
@@ -500,7 +572,6 @@ def main():
                         logger.info("Saving model checkpoint to %s", output_dir)
                         model.save_pretrained(output_dir)
 
-        # load model
         model.save_pretrained(output_dir)
         logger.info("Final evaluation")
 
