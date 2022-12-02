@@ -42,7 +42,26 @@ def filter_example(example, vocab_set, contractions, additional_exclusions=True)
         if word not in vocab_set:
             return False
     return True
-        
+
+def group_sentences(
+        split,
+        max_len=128,
+        sentence_split_ratio=1.2,
+):
+    print('grouping sentences...')
+    list_out = []
+    cur_sequence = ''
+    idx = 0
+    for item in split:
+        new_sequence = cur_sequence + item['TEXT'] + ' '
+        if (len(new_sequence.split(' ')) * sentence_split_ratio) >= max_len:
+            list_out.append(cur_sequence)
+            cur_sequence = item['TEXT'] + ' '
+        else:
+            cur_sequence = new_sequence
+    print('done')
+
+    return list_out
 
 def filter_glue_dataset(
     task_name, cache_dir, 
