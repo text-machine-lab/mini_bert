@@ -8,21 +8,20 @@ with open('data/new_data_raw/processed_data.json', 'r') as f:
 
 
 def group_sentences(df, sentence_split_ratio=1.2, max_len=128):
-    grouped_lists = {}
+    grouped_lists = []
     cur_sequence = ''
     for example in list(df['TEXT']):
         new_sequence = cur_sequence + example + ' '
         if (len(new_sequence.split(' ')) * sentence_split_ratio) >= max_len:
-            grouped_lists[len(grouped_lists)] = cur_sequence
+            grouped_lists.append(cur_sequence)
             cur_sequence = example + ' '
         else:
             cur_sequence = new_sequence
-    df = pandas.DataFrame.from_dict(grouped_lists, orient="index")
-    return df
+    return grouped_lists
 
 
 df = pandas.DataFrame.from_dict(data, orient="index")
-df = utils.group_sentences(df)
+df = group_sentences(df)
 df = pandas.DataFrame({"TEXT": df})
 formatted_data = Dataset.from_pandas(df)
 
