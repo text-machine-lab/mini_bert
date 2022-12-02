@@ -16,8 +16,8 @@ from torch.optim.lr_scheduler import LambdaLR
 from transformers import (
     AutoTokenizer,
     AutoConfig,
-    AutoModelForSeq2SeqLM, 
-    RobertaTokenizerFast, 
+    AutoModelForSeq2SeqLM,
+    RobertaTokenizerFast,
     RobertaForMaskedLM,
     AutoModelForSequenceClassification,
 )
@@ -79,7 +79,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_path",
         type=str,
-        default="formatted_data",
+        default="data/formatted_data_new",
         help="path to raw dataset",
     )
     parser.add_argument(
@@ -88,14 +88,14 @@ def parse_args():
         default="qnli",
         help="glue task to evaluate on",
     )
-    
+
     parser.add_argument(
         "--validation_size",
         type=float,
         default=0.05,
         help="Size of the validation split of the pre-training data",
     )
-    
+
     parser.add_argument(
         "--tokenizer_path",
         type=str,
@@ -109,7 +109,7 @@ def parse_args():
         action="store_true",
         help="Whether to use a small subset of the dataset for debugging.",
     )
-    
+
     parser.add_argument(
         "--fixed_seed_val",
         type=int,
@@ -220,7 +220,7 @@ def parse_args():
         default=32,
         help="Accumulate gradient for these many steps",
     )
-    
+
     parser.add_argument(
         "--eval_every_steps",
         type=int,
@@ -371,22 +371,15 @@ def main():
     device = args.device
     if args.device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    
+
     #
     if args.tokenizer_path:
         tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
     else:
         tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
     tokenizer.add_special_tokens({'pad_token': '<pad>'})
-    
 
-    # @TODO: This is the newly added part for creating dataloaders.
-    # define dataloader
-    print('Reading data...')
-    with open(args.dataset_path, 'r') as f:
-        data_raw = json.load(f)
-    print('Reading done.')
+    data_raw = DatasetDict.load_from_disk(args.dataset_path)
 
     # 
     dataloaders = LMData.LMDataloader(
@@ -403,7 +396,6 @@ def main():
     train_dataloader = dataloaders.dataloader['train']
     eval_dataloader = dataloaders.dataloader['validation']
 
-    
     #
     wandb.init(project=args.wandb_project, config=args)
     output_dir = args.output_dir
@@ -417,7 +409,7 @@ def main():
                 Path(output_dir).mkdir(parents=True, exist_ok=True)
             except:
                 print("error while creating/finding output dir")
-            
+
             # @TODO: fix weight init            
             model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
             config = model.config
@@ -435,8 +427,8 @@ def main():
 
         # define optimizer
         optimizer = torch.optim.AdamW(
-            params=model.parameters(), 
-            lr=args.learning_rate, 
+            params=model.parameters(),
+            lr=args.learning_rate,
             betas=(0.9, args.beta2),
         )
 
@@ -463,12 +455,12 @@ def main():
             model.train()  # make sure that model is in training mode, e.g. dropout is enabled
             if global_step >= args.max_train_steps:
                 break
-            
+
             # iterate over batches
             for batch in train_dataloader:
                 if global_step >= args.max_train_steps:
                     break
-                
+
                 # shift tensors to device
                 input_ids = batch["input_ids"].to(device)
                 labels = batch["labels"].to(device)
@@ -521,3 +513,4 @@ if __name__ == "__main__":
     main()
 
 # python3 train.py --beta2=0.95 --learning_rate=0.00005 --max_train_steps=1 --restart --output_dir=output_dir/dazzling-haze-202 --tokenizer_path=Sentence_13k --batch_size=10 --glue_learning_rate=0.01 --glue_epochs=100 --restart_for_fine_tuning
+# python3 train.py --beta2=0.95 --learning_rate=0.00005 --max_train_steps=10 --output_dir=output_dir --tokenizer_path=tokenizers/Sentence_13k --batch_size=10 --debug --dataset_path=data/formatted_data_new
