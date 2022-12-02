@@ -26,8 +26,8 @@ df = utils.group_sentences(df)
 df = pandas.DataFrame({"TEXT": df})
 formatted_data = Dataset.from_pandas(df)
 
-formatted_data = formatted_data.train_test_split()
-formatted_data_test = formatted_data["test"].train_test_split()
+formatted_data = formatted_data.train_test_split(test_size=0.04)
+formatted_data_test = formatted_data["test"].train_test_split(test_size=0.5)
 formatted_data["validation"] = formatted_data_test["train"]
 formatted_data["test"] = formatted_data_test["test"]
 formatted_data.save_to_disk("formatted_data")
