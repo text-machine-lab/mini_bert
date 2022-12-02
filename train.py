@@ -264,26 +264,6 @@ def parse_args():
 
     return args
 
-def group_sentences(
-        split,
-        max_len=128,
-        sentence_split_ratio=1.2,
-):
-    print('grouping sentences...')
-    list_out = []
-    cur_sequence = ''
-    idx = 0
-    for item in split:
-        new_sequence = cur_sequence + item['TEXT'] + ' '
-        if (len(new_sequence.split(' ')) * sentence_split_ratio) >= max_len:
-            list_out.append(cur_sequence)
-            cur_sequence = item['TEXT'] + ' '
-        else:
-            cur_sequence = new_sequence
-    print('done')
-
-    return list_out
-
 def preprocess_function(
         examples,
         max_seq_length,
@@ -301,8 +281,8 @@ def preprocess_function(
         :param examples:
         :param use_ast:
     """
-
-    model_inputs = tokenizer(examples, max_length=max_seq_length, padding=True, truncation=True, return_tensors='pt')
+    inputs = examples["TEXT"]
+    model_inputs = tokenizer(inputs, max_length=max_seq_length, padding=True, truncation=True, return_tensors='pt')
     model_inputs['labels'] = model_inputs.input_ids.detach().clone()
 
     rand_mask = torch.rand(model_inputs.labels.shape)
@@ -399,14 +379,13 @@ def main():
     tokenizer.add_special_tokens({'pad_token': '<pad>'})
 
     raw_datasets = DatasetDict.load_from_disk(args.dataset_path)
+    if not (isinstance(raw_datasets, DatasetDict) and "train" in raw_datasets.keys()):
+        raw_datasets = raw_datasets.train_test_split()
+        # print(f"dataset keys {raw_datasets.keys()}")
     if args.debug:
         raw_datasets = utils.sample_small_debug_dataset(
             raw_datasets, args.sample_size
         )
-    raw_datasets = {k: group_sentences(v) for k, v in raw_datasets.items()}
-
-
-
     print("Data loaded")
     # Preprocessing the datasets.
     # First we tokenize all the texts.
