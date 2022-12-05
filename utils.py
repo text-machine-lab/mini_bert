@@ -42,7 +42,7 @@ def filter_example(example, vocab_set, contractions, additional_exclusions=True)
         if word not in vocab_set:
             return False
     return True
-        
+
 
 def filter_glue_dataset(
     task_name, cache_dir, 
