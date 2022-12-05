@@ -30,6 +30,7 @@ from functools import partial
 from torch.utils.data import DataLoader
 from datasets import load_from_disk, DatasetDict
 from tqdm.auto import tqdm
+import os
 
 class LMTrainer():
     
@@ -48,6 +49,7 @@ class LMTrainer():
         dataloaders = self.get_dataloaders(args=args)
         self.train_dataloader = dataloaders.dataloader['train']
         self.eval_dataloader = dataloaders.dataloader['validation']
+        self.test_dataloader = dataloaders.dataloader['test']
         
         # step 3: get model
         self.model = self.get_model(args=args)
@@ -63,6 +65,7 @@ class LMTrainer():
             lr=args.learning_rate, 
             betas=(args.beta1, args.beta2),
             weight_decay=args.weight_decay,
+            #amsgrad=True,
         )
         
         # step 6: define LR scheduler
@@ -95,10 +98,11 @@ class LMTrainer():
     ):
         # define dataloader
         print('Reading data...')
-        with open(args.dataset_path, 'r') as f:
-            data_raw = json.load(f)
+        data_raw = load_from_disk(args.dataset_path)
+        #with open(args.dataset_path, 'r') as f:
+        #    data_raw = json.load(f)
         print('Reading done.')
-        #data_raw = load_from_disk("formatted_data")
+        
 
         # 
         print('\nCreating dataloaders...')
@@ -112,7 +116,7 @@ class LMTrainer():
             fixed_seed_val=args.fixed_seed_val,
             debug=args.debug,
         )
-        dataloaders.check_dataloader()        
+        dataloaders.check_dataloader()
     
         return dataloaders
     
@@ -144,10 +148,10 @@ class LMTrainer():
         model.to(args.device)
         
         # initialize weights of the model
-        model = self.init_weights(
-            model=model, 
-            fixed_seed_val=args.fixed_seed_val
-        )
+        #model = self.init_weights(
+        #    model=model, 
+        #    fixed_seed_val=args.fixed_seed_val
+        #)
         
         return model
     
@@ -208,7 +212,7 @@ class LMTrainer():
         #
         step = 1 if step == 0 else step
         factor = min(step**(-1 * 0.5), step * self.num_warmup_steps**(-1 * 1.5))
-        return factor * self.model_size ** (-1 * 0.5)
+        return factor * (self.model_size ** (-1 * 0.5))
         
         #
         #if step < self.num_warmup_steps:
@@ -234,7 +238,7 @@ class LMTrainer():
             args.num_train_epochs = math.ceil(args.max_steps / len(self.train_dataloader))
         
         # calculate warmup steps
-        num_warmup_steps = math.floor((args.max_train_steps * 5 / 100)) #max(1000, math.floor((args.max_train_steps * 5 / 100))) 
+        num_warmup_steps = min(4000, math.floor((args.max_train_steps * 5 / 100))) #max(1000, math.floor((args.max_train_steps * 5 / 100))) 
         
         # save values
         self.max_steps = args.max_steps
@@ -257,13 +261,13 @@ class LMTrainer():
     ):
         
         # turn on evlauation mode: no dropout
-        model.eval()
         #n_correct = 0
         #n_examples = 0
         #all_pred, all_trg = [], []
         total_eval_loss = torch.tensor(0.0, device=self.device)
         
         #
+        model.eval()
         for batch in tqdm(eval_dataloader, desc="Evaluating"):
             with torch.no_grad():
                 # to device
@@ -343,6 +347,7 @@ class LMTrainer():
         #
         global_step = 0
         eval_met_perp = float('inf')
+        optimizer.zero_grad()
         for epoch in range(self.num_train_epochs):
             model.train()
             for batch in train_dataloader:
@@ -422,5 +427,20 @@ class LMTrainer():
                         logger.info("Saving model checkpoint to %s", args.output_dir)
                         model.save_pretrained(args.output_dir)
                         logger.info(f"model saved in {args.output_dir}")
-                        
+                
+                # save model checkpoint
+                if (global_step % args.save_checkpoint_evey_steps == 0):
+                    model.save_pretrained(oa.path.join(args.output_dir, f'checkpoint_at_{global_step}'))
+        
+        # evaluate on test split
+        metrics = self.eval_model(model, self.test_dataloader, args.debug)
+        wandb.log(
+            {
+                'MLMTest/loss': metrics["MLMEval/loss"],
+                'MLMTest/perplexity': metrics["MLMEval/perplexity"],
+            }, 
+            step=global_step
+        )
+                
+                
         return model

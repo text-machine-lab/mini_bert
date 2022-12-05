@@ -69,7 +69,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_path",
         type=str,
-        default="./../../../from_shala/vocabulary_analysis/data_filtration/Filtration_15Nov2022/ALL_FILTERED_DATA/processed_data.json",
+        default="/home/shree/mini_bert/mini_bert/data/formatted_data_new",
         help="path to raw dataset",
     )
     parser.add_argument(
@@ -221,7 +221,7 @@ def parse_args():
     parser.add_argument(
         "--grad_acc_steps",
         type=int,
-        default=1,
+        default=25,
         help="Accumulate gradient for these many steps",
     )
     
@@ -230,6 +230,13 @@ def parse_args():
         type=int,
         default=200,
         help="Perform evaluation every n network updates.",
+    )
+    
+    parser.add_argument(
+        "--save_checkpoint_evey_steps",
+        type=int,
+        default=3000,
+        help="Save model checkpoint",
     )
     
     parser.add_argument(
@@ -254,7 +261,7 @@ def parse_args():
     parser.add_argument(
         "--max_train_steps",
         type=int,
-        default=100,
+        default=None,
         help="Total number of training steps to perform. If provided, overrides num_train_epochs.",
     )
     parser.add_argument(

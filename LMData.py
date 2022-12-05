@@ -10,7 +10,7 @@ from transformers import AutoTokenizer
 from transformers import DataCollatorForWholeWordMask, DataCollatorForLanguageModeling
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
-
+import sys
 
 class LMDataset(Dataset):
     def __init__(
@@ -18,10 +18,15 @@ class LMDataset(Dataset):
         list_data,
         tokenizer,
         max_seq_len,
+        debug=False,
     ):
         
         #
-        self.data = list_data
+        self.data = list_data['TEXT']
+        if debug:
+            self.data = self.data[:100]
+        
+        #
         self.tokenizer = tokenizer
         self.max_len = max_seq_len
     
@@ -125,32 +130,36 @@ class LMDataloader():
         #
         self.debug = debug
         self.tokenizer = tokenizer
+        self.fixed_seed_val = fixed_seed_val
+        self.max_seq_len = max_seq_len
+        self.mlm_probability = mlm_probability
         
         # covert dictionary of sentences into a list of grouped sentences
-        list_data = self.group_sentences(
-            dict_data=dict_data,
-            max_len=max_seq_len,
-        )
+        #list_data = self.group_sentences(
+        #    dict_data=dict_data,
+        #    max_len=max_seq_len,
+        #)
         
         # split the data
-        train, val = self.split_data(
-            list_data=list_data,
-            validation_size=validation_size,
-            fixed_seed_val=fixed_seed_val,
-        )
+        #train, val = self.split_data(
+        #    list_data=list_data,
+        #    validation_size=validation_size,
+        #    fixed_seed_val=fixed_seed_val,
+        #)
         
         # convert into dataset format
         self.dataset = {}
-        self.dataset['train'] = LMDataset(
-            list_data=train,
-            tokenizer=tokenizer,
-            max_seq_len=max_seq_len,
-        )
-        self.dataset['validation'] = LMDataset(
-            list_data=val,
-            tokenizer=tokenizer,
-            max_seq_len=max_seq_len,
-        )
+        for split in ['train', 'validation', 'test']:
+            self.dataset[split] = LMDataset(
+                list_data=dict_data[split],
+                tokenizer=tokenizer,
+                max_seq_len=max_seq_len,
+                debug=debug,
+            )
+
+        #
+        self.size_train = self.dataset['train'].__len__()
+        self.size_valid = self.dataset['validation'].__len__()
         
         # define data collator
         collator_obj = DataCollatorForLanguageModeling(
@@ -161,13 +170,26 @@ class LMDataloader():
         )
         
         #
+        """
+        NOTE: Default collation object (defined above) matches the masking adopted in BERT
+        i.e., 
+        15% masking, 
+        80% of the words selected for masking are replaced by  <mask>
+        10% of the words selected for masking are kept the same
+        10% of the words selected for masking are replaced by a random word
+        And, we do not have control over (80, 10, 10)
+        
+        The custom collation function defined in this class simplifies the masking
+        and implements 15% masking with (100, 0, 0).
+        
+        """
         self.dataloader = {}
-        for split in self.dataset:
+        for split in ['train', 'validation', 'test']:#self.dataset:
             self.dataloader[split] = DataLoader(
                 self.dataset[split],
                 batch_size=batch_size,
                 shuffle=False,
-                collate_fn=collator_obj,
+                collate_fn=self.custom_collation, #collator_obj, #self.custom_collation
             )
         
         return
@@ -210,13 +232,13 @@ class LMDataloader():
         
         #
         if self.debug:
-            list_data = list_data[:10]
+            list_data = list_data#[:10]
         
         #
         train_, valid_ = train_test_split(
             list_data,
             test_size=validation_size,
-            random_state=fixed_seed_val
+            random_state=1,#fixed_seed_val
         )
         
         #
@@ -230,6 +252,49 @@ class LMDataloader():
         
         return train_, valid_
     
+    def custom_collation(
+        self,
+        batch,
+    ):
+        
+        #
+        input_ids = [i['input_ids'] for i in batch]
+        np.random.seed()
+        
+        seq_ins = []
+        seq_outs = []
+        for seq in input_ids:
+            seq_in = [self.tokenizer.pad_token_id] * self.max_seq_len
+            seq_in[:len(seq)] = seq
+            
+            #
+            mask_pos = (np.random.uniform(low=0, high=1, size=len(seq_in)) <= self.mlm_probability).tolist()
+            seq_out = [self.tokenizer.pad_token_id] * self.max_seq_len
+            for pos_idx, pos in enumerate(seq_in):
+                if pos == self.tokenizer.pad_token_id:
+                    break
+                
+                if mask_pos[pos_idx] == 1:
+                    seq_out[pos_idx] = seq[pos_idx]
+                    seq_in[pos_idx] = self.tokenizer.mask_token_id
+                else:
+                    seq_out[pos_idx] = -100
+            
+            #
+            seq_ins.append(seq_in)
+            seq_outs.append(seq_out)
+        
+        #
+        batch_out = {
+            'input_ids': torch.LongTensor(seq_ins),
+            'labels': torch.LongTensor(seq_outs)
+        }
+        
+        #
+        np.random.seed(self.fixed_seed_val)   
+            
+        return batch_out
+    
     def check_dataloader(
         self,
         print_examples=2,
@@ -240,6 +305,7 @@ class LMDataloader():
         print(f'Size of the validation dataset: {self.size_valid}')
         
         #
+        count_add_pred = 0
         for split in ['train', 'validation']:
             print(f'\nPrinting examples in the {split} split of the data')
             for batch in self.dataloader[split]:
@@ -255,28 +321,44 @@ class LMDataloader():
                     in_seq = self.tokenizer.batch_decode(batch['input_ids'][c_idx])
                     out_seq = ''
                     masked_words = []
+                    predictions = []
+                    prediction_ids = []
                     
                     #
+                    count_mask = 0
                     for id_idx, id_ in enumerate(in_seq):
                         if id_ == '<mask>':
+                            count_mask += 1
                             out_seq += self.tokenizer.decode(labels[id_idx]) + ' '
                             masked_words.append(self.tokenizer.decode(labels[id_idx]))
                         else:
                             out_seq += id_ + ' '
-
+                    
+                    #
+                    for id_idx, id_ in enumerate(labels):
+                        if id_ != -100:
+                            predictions.append(self.tokenizer.decode(id_))
+                            prediction_ids.append(id_)
                     #
                     in_seq = ' '.join(in_seq)
-
+                    
                     #
                     print('='*10)
                     print(f'\nINPUT sequence is: {in_seq}')
                     print(f'\nOUTPUT sequence is: {out_seq}')
                     print(f'\nMASKED tokens: {masked_words}')
-                
+
+                    #
+                    if count_mask != len(predictions):
+                        count_add_pred += 1                 
+                        #print('='*10)
+                        #print(f'\nPRED: {predictions}')
+                        #print(f'\nPRED IDs: {prediction_ids}')
                 #
                 break
             
             #
             break
-    
+        #print(f'Count of examples with added prediction: {count_add_pred}')
+        
         return
