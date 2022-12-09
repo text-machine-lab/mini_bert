@@ -52,6 +52,14 @@ def parse_args():
             "Both of these should be directories containing tokenizer.json files."
         ),
     )
+    
+    parser.add_argument(
+        "--checkpoint_dir",
+        type=str,
+        default='./output_dir/earthy-moon-78',
+        help="Where to find previous checkpoint",
+    )
+    
     parser.add_argument(
         "--restart",
         default=False,
@@ -72,6 +80,13 @@ def parse_args():
         default="/home/shree/mini_bert/mini_bert/data/formatted_data_new",
         help="path to raw dataset",
     )
+    parser.add_argument(
+        "--use_wiki_data",
+        type=bool,
+        default=False,
+        help="Use wikipedia data instead of filtered data",
+    )
+    
     parser.add_argument(
         "--dataset_attribute",
         type=str,
@@ -264,6 +279,13 @@ def parse_args():
         default=None,
         help="Total number of training steps to perform. If provided, overrides num_train_epochs.",
     )
+    parser.add_argument(
+        "--warmup_percent",
+        type=float,
+        default=0.05,
+        help="Total number of training epochs to perform.",
+    )
+    
     parser.add_argument(
         "--lr_scheduler_type",
         type=transformers.SchedulerType,

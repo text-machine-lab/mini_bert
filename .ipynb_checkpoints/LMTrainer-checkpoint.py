@@ -19,12 +19,13 @@ from transformers import (
     AutoModelForSeq2SeqLM, 
     RobertaTokenizerFast, 
     RobertaForMaskedLM,
+    AlbertForMaskedLM,
     AutoModelForSequenceClassification,
     get_cosine_schedule_with_warmup,
     get_linear_schedule_with_warmup,
     get_polynomial_decay_schedule_with_warmup,
 )
-from datasets import load_from_disk
+from datasets import load_from_disk, load_dataset, DatasetDict, Dataset
 from pathlib import Path
 from functools import partial
 from torch.utils.data import DataLoader
@@ -92,16 +93,100 @@ class LMTrainer():
         
         return
     
+    def load_wiki_data(
+        self,
+    ):
+        
+        """
+        #
+        wikidata = load_dataset("wikipedia", "20220301.en", beam_runner='DirectRunner')
+        
+        
+        #
+        train_test = wiki_data.train_test_split(
+            test_size=0.01,
+            seed=0,
+        )
+        test_val = train_test['test'].train_test_split(
+            test_size=0.5,
+            seed=0,
+        )
+        
+        #
+        data_raw = DatasetDict()
+        data_raw['train'] = train_test['train']
+        data_raw['validation'] = test_val['test']
+        data_raw['test'] = test_val['train']
+        """
+        
+        #
+        wikidata = load_dataset("wikitext", "wikitext-103-raw-v1")#, beam_runner='DirectRunner')
+        instances = []
+        for split in tqdm(wikidata):
+            for instance in wikidata[split]:
+                if len(instance['text']) >= 50:
+                    
+                    if len(instance['text']) <= 110:
+                        instances.append(
+                            {
+                                'text': instance['text']
+                            }
+                        )
+                    else:
+                        text = ''
+                        for word in instance['text'].split(' '):
+                            
+                            if len(text) <= 100:
+                                text = text + word + ' '
+                            else:
+                                instances.append(
+                                    {
+                                        'text': text
+                                    }
+                                )
+                                text = ''
+                        #
+                        if text != '' and len(text) >= 30:
+                            instances.append(
+                                {
+                                    'text': text
+                                }
+                            )
+        
+        #
+        instances = Dataset.from_list(instances)
+        train_test = instances.train_test_split(
+            test_size=0.01,
+            seed=0,
+        )
+        test_val = train_test['test'].train_test_split(
+            test_size=0.5,
+            seed=0,
+        )
+        
+        #
+        data_raw = DatasetDict()
+        data_raw['train'] = train_test['train']
+        data_raw['validation'] = test_val['test']
+        data_raw['test'] = test_val['train']
+        print(data_raw)
+        
+        
+        return data_raw
+    
     def get_dataloaders(
         self,
         args,
     ):
         # define dataloader
         print('Reading data...')
-        data_raw = load_from_disk(args.dataset_path)
-        #with open(args.dataset_path, 'r') as f:
-        #    data_raw = json.load(f)
+        if not args.use_wiki_data:
+            data_raw = load_from_disk(args.dataset_path)
+        else:
+            data_raw = self.load_wiki_data()        
         print('Reading done.')
+        
+        #
         
 
         # 
@@ -140,11 +225,20 @@ class LMTrainer():
         if not args.restart:
             # In the model, we want to follow the babyBerta configuration with our vocab size
             model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
+            #model = AlbertForMaskedLM.from_pretrained('albert-base-v2')
             config = model.config
             config.vocab_size = len(self.tokenizer) + 10 # + x is for special tokens
+            config.num_hidden_layers = 2
+            config.num_attention_heads = 8
+            config.attention_probs_dropout_prob = 0.1
+            config.hidden_dropout_prob = 0.1
+            config.hidden_size = 256
+            config.intermediate_size = 1024
             model = RobertaForMaskedLM(config=config)
+            #model = AlbertForMaskedLM(config=config)
         else:
-            model = RobertaForMaskedLM.from_pretrained(args.output_dir)
+            print(f'Reading previous checkpoint from {args.checkpoint_dir}')
+            model = RobertaForMaskedLM.from_pretrained(args.checkpoint_dir)
         model.to(args.device)
         
         # initialize weights of the model
@@ -209,17 +303,19 @@ class LMTrainer():
         https://nn.labml.ai/optimizers/noam.html
         """
         
-        #
-        step = 1 if step == 0 else step
-        factor = min(step**(-1 * 0.5), step * self.num_warmup_steps**(-1 * 1.5))
-        return factor * (self.model_size ** (-1 * 0.5))
-        
-        #
+        # Inverse SQ
         #if step < self.num_warmup_steps:
         #    return step / self.num_warmup_steps
         #else:
-        #    return (step**(-0.5) * self.model_size**(-0.5))
-    
+        #    return step**(-0.5)
+        
+        # NOAM
+        step = 1 if step == 0 else step
+        factor = min(step**(-1 * 0.5), step * self.num_warmup_steps**(-1 * 1.5))
+        
+        return factor * (self.model_size ** (-1 * 0.5))
+        
+        
     def get_steps(
         self,
         args,
@@ -238,7 +334,7 @@ class LMTrainer():
             args.num_train_epochs = math.ceil(args.max_steps / len(self.train_dataloader))
         
         # calculate warmup steps
-        num_warmup_steps = min(4000, math.floor((args.max_train_steps * 5 / 100))) #max(1000, math.floor((args.max_train_steps * 5 / 100))) 
+        num_warmup_steps = min(4000, max(1, math.floor((args.max_train_steps * args.warmup_percent)))) #max(1000, math.floor((args.max_train_steps * 5 / 100))) 
         
         # save values
         self.max_steps = args.max_steps
@@ -271,17 +367,15 @@ class LMTrainer():
         for batch in tqdm(eval_dataloader, desc="Evaluating"):
             with torch.no_grad():
                 # to device
-                input_ids = batch["input_ids"].to(self.device)
-                labels = batch["labels"].to(self.device)
+                batch = {k_: v_.to(self.device) for k_, v_ in batch.items()}
                 
                 # forward pass
-                model_output = model(input_ids=input_ids, labels=labels)
+                model_output = model(**batch)
                 
                 # loss
                 loss = model_output.loss
                 logits = model_output.logits
                 total_eval_loss += loss
-                
                 
                 #
                 #if debug:
@@ -357,26 +451,22 @@ class LMTrainer():
                     break
                     
                 # shift tensors to device
-                input_ids = batch["input_ids"].to(self.device)
-                labels = batch["labels"].to(self.device)
-                # ipdb.set_trace()
-                # print(f"input size {input_ids.shape}  label shape {labels.shape}")
+                batch = {k_: v_.to(self.device) for k_, v_ in batch.items()}
                 
                 # forward pass
-                outputs = model(input_ids=input_ids, labels=labels)
+                outputs = model(**batch)
                 
                 # loss calculation
                 # NOTE: loss = loss_, CHECKED
                 loss = outputs.loss
-                logits = outputs.logits.permute((0, 2, 1))
+                #logits = outputs.logits.permute((0, 2, 1))
                 #loss_ = criterion(logits, labels)
                 #print(((loss - loss_) / loss) * 100)
                 
                 
                 # perform gradient accumulation
-                # @TODO: to average over the accumulation steps or not?
-                loss = loss / args.grad_acc_steps
-                loss.backward()
+                loss_acc = loss / args.grad_acc_steps
+                loss_acc.backward()
                 if ((global_step%args.grad_acc_steps) == 0) or ((global_step+1) == args.max_train_steps):
                     optimizer.step()
                     lr_scheduler.step()
@@ -430,7 +520,7 @@ class LMTrainer():
                 
                 # save model checkpoint
                 if (global_step % args.save_checkpoint_evey_steps == 0):
-                    model.save_pretrained(oa.path.join(args.output_dir, f'checkpoint_at_{global_step}'))
+                    model.save_pretrained(os.path.join(args.output_dir, f'checkpoint_at_{global_step}'))
         
         # evaluate on test split
         metrics = self.eval_model(model, self.test_dataloader, args.debug)

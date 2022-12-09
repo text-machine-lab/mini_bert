@@ -22,7 +22,10 @@ class LMDataset(Dataset):
     ):
         
         #
-        self.data = list_data['TEXT']
+        try:
+            self.data = list_data['TEXT']
+        except:
+            self.data = list_data['text']
         if debug:
             self.data = self.data[:100]
         
@@ -199,6 +202,7 @@ class LMDataloader():
         dict_data,
         max_len=128,
         sentence_split_ratio=1.2,
+        key='TEXT'
     ):
         print('grouping sentences...')
         list_out = []
@@ -206,10 +210,10 @@ class LMDataloader():
         idx = 0
         for k_, v_ in tqdm(dict_data.items()):
             idx += 1
-            new_sequence = cur_sequence + v_['TEXT'] + ' '
+            new_sequence = cur_sequence + v_[key] + ' '
             if (len(new_sequence.split(' ')) * sentence_split_ratio) >= max_len:
                 list_out.append(cur_sequence)
-                cur_sequence = v_['TEXT'] + ' '
+                cur_sequence = v_[key] + ' '
             else:
                 cur_sequence = new_sequence
             
