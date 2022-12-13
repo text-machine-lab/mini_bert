@@ -196,16 +196,16 @@ def run_vocabulary_experiment():
     tokenizer_names = [
         #'BPE',
         #'WordPiece',
-        #'SentencePiece',
+        'SentencePiece',
         #'bert-base-uncased',
         #'phueb/BabyBERTa-1', 
         #'prajjwal1/bert-tiny', 
         #'distilbert-base-uncased', 
-        'roberta-base',
+        #'roberta-base',
         #'t5-base',
         #'albert-base-v2',
     ]
-    vocab_sizes = [17000, 17200, 17400, 17600, 17800]#[i for i in range(5000, 15001, 1000)]
+    vocab_sizes = [16600, 16800, 17000, 17200, 17400, 17600, 17800]#[i for i in range(5000, 15001, 1000)]
     total_exp = (len(tokenizer_names) * len(vocab_sizes)) + (len(tokenizer_names))
     df_exp = pd.DataFrame(
         -1,

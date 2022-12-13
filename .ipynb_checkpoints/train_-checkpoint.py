@@ -52,6 +52,14 @@ def parse_args():
             "Both of these should be directories containing tokenizer.json files."
         ),
     )
+    
+    parser.add_argument(
+        "--checkpoint_dir",
+        type=str,
+        default='./output_dir/earthy-moon-78',
+        help="Where to find previous checkpoint",
+    )
+    
     parser.add_argument(
         "--restart",
         default=False,
@@ -69,9 +77,16 @@ def parse_args():
     parser.add_argument(
         "--dataset_path",
         type=str,
-        default="./../../../from_shala/vocabulary_analysis/data_filtration/Filtration_15Nov2022/ALL_FILTERED_DATA/processed_data.json",
+        default="/home/shree/mini_bert/mini_bert/data/formatted_data_new",
         help="path to raw dataset",
     )
+    parser.add_argument(
+        "--use_wiki_data",
+        type=bool,
+        default=False,
+        help="Use wikipedia data instead of filtered data",
+    )
+    
     parser.add_argument(
         "--dataset_attribute",
         type=str,
@@ -221,7 +236,7 @@ def parse_args():
     parser.add_argument(
         "--grad_acc_steps",
         type=int,
-        default=1,
+        default=25,
         help="Accumulate gradient for these many steps",
     )
     
@@ -230,6 +245,13 @@ def parse_args():
         type=int,
         default=200,
         help="Perform evaluation every n network updates.",
+    )
+    
+    parser.add_argument(
+        "--save_checkpoint_evey_steps",
+        type=int,
+        default=3000,
+        help="Save model checkpoint",
     )
     
     parser.add_argument(
@@ -254,9 +276,16 @@ def parse_args():
     parser.add_argument(
         "--max_train_steps",
         type=int,
-        default=100,
+        default=None,
         help="Total number of training steps to perform. If provided, overrides num_train_epochs.",
     )
+    parser.add_argument(
+        "--warmup_percent",
+        type=float,
+        default=0.05,
+        help="Total number of training epochs to perform.",
+    )
+    
     parser.add_argument(
         "--lr_scheduler_type",
         type=transformers.SchedulerType,
@@ -289,8 +318,9 @@ def main():
     
     # fix seed
     torch.manual_seed(args.fixed_seed_val)
-    np.random.seed(args.fixed_seed_val)
     random.seed(args.fixed_seed_val)
+    np.random.seed(args.fixed_seed_val)
+    transformers.set_seed(args.fixed_seed_val)
     
     # set device
     os.environ["CUDA_VISIBLE_DEVICES"] = args.device_index

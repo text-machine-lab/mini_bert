@@ -271,8 +271,9 @@ def main():
     # download the dataset.
     if data_args.task_name is not None:
         # Downloading and loading a dataset from the hub.
-        raw_datasets = utils.filter_glue_dataset(
-            task_name=data_args.task_name,
+        raw_datasets = load_dataset(
+            "glue",
+            data_args.task_name,
             cache_dir=model_args.cache_dir,
             use_auth_token=True if model_args.use_auth_token else None,
         )
@@ -515,10 +516,7 @@ def main():
         eval_dataset=eval_dataset if training_args.do_eval else None,
         compute_metrics=compute_metrics,
         tokenizer=tokenizer,
-        data_collator=data_collator,
-        # @TODO: following lines are changed to make sure we are using the best model to evaluate
-        #load_best_model_at_end=True,
-        #save_strategy = "no",
+        data_collator=data_collator
     )
 
     # Training
