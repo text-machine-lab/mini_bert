@@ -47,7 +47,7 @@ def filter_example(example, vocab_set, contractions, additional_exclusions=True)
 def filter_glue_dataset(
     task_name, cache_dir, 
     use_auth_token=None, 
-    aochildes_vocab_path="AOChildes_word_frequency.csv"
+    aochildes_vocab_path="../AOChildes_word_frequency.csv"
 ):
     """Filters GLUE datasets based on AOChildes vocabulary
     Args:
