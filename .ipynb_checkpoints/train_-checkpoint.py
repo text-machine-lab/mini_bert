@@ -318,8 +318,9 @@ def main():
     
     # fix seed
     torch.manual_seed(args.fixed_seed_val)
-    np.random.seed(args.fixed_seed_val)
     random.seed(args.fixed_seed_val)
+    np.random.seed(args.fixed_seed_val)
+    transformers.set_seed(args.fixed_seed_val)
     
     # set device
     os.environ["CUDA_VISIBLE_DEVICES"] = args.device_index

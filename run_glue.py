@@ -515,7 +515,10 @@ def main():
         eval_dataset=eval_dataset if training_args.do_eval else None,
         compute_metrics=compute_metrics,
         tokenizer=tokenizer,
-        data_collator=data_collator
+        data_collator=data_collator,
+        # @TODO: following lines are changed to make sure we are using the best model to evaluate
+        #load_best_model_at_end=True,
+        #save_strategy = "no",
     )
 
     # Training

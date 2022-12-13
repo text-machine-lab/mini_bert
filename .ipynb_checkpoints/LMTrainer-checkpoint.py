@@ -228,7 +228,7 @@ class LMTrainer():
             #model = AlbertForMaskedLM.from_pretrained('albert-base-v2')
             config = model.config
             config.vocab_size = len(self.tokenizer) + 10 # + x is for special tokens
-            config.num_hidden_layers = 2
+            config.num_hidden_layers = 8
             config.num_attention_heads = 8
             config.attention_probs_dropout_prob = 0.1
             config.hidden_dropout_prob = 0.1
@@ -242,10 +242,10 @@ class LMTrainer():
         model.to(args.device)
         
         # initialize weights of the model
-        #model = self.init_weights(
-        #    model=model, 
-        #    fixed_seed_val=args.fixed_seed_val
-        #)
+        model = self.init_weights(
+            model=model, 
+            fixed_seed_val=args.fixed_seed_val
+        )
         
         return model
     
