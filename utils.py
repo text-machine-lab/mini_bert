@@ -31,24 +31,24 @@ def filter_example(task_name, example, vocab_set, contractions, additional_exclu
         sentence = example['inputs']
     elif 'sentence1' in features:
         sentence = example['sentence1'] + " " + example['sentence2']
-    elif subset in ['wsc', 'wsc.fixed', 'winogrande-xl']:
+    elif task_name in ['wsc', 'wsc.fixed', 'winogrande-xl']:
         t1 = list(features)[0]
         sentence = example[t1]
-    elif subset in ['conll2003', 'race', 'ai2_arc', 'martn-nguyen/adversarial_nli']:
+    elif task_name in ['conll2003', 'race', 'ai2_arc', 'martn-nguyen/adversarial_nli']:
         t1 = list(features)[1]
         sentence = example[t1]
-    elif subset in ['squad']:
+    elif task_name in ['squad']:
         t1 = list(features)[2]
         t2 = list(features)[3]
         sentence = example[t1] + " " + example[t2]
-    elif subset == "swag":
-        t1 = list(dataset[segment].features)[2]
-        t2 = list(dataset[segment].features)[6]
-        t3 = list(dataset[segment].features)[7]
-        t4 = list(dataset[segment].features)[8]
-        t5 = list(dataset[segment].features)[9]
+    elif task_name == "swag":
+        t1 = list(features)[2]
+        t2 = list(features)[6]
+        t3 = list(features)[7]
+        t4 = list(features)[8]
+        t5 = list(features)[9]
         sentence = example[t1] + " " + example[t2] + " " + example[t3] + " " + example[t4] + " " + example[t5]
-    elif subset in ['copa', 'piqa']:
+    elif task_name in ['copa', 'piqa']:
         t1 = list(features)[0]
         t2 = list(features)[1]
         t3 = list(features)[2]
@@ -70,6 +70,30 @@ def filter_example(task_name, example, vocab_set, contractions, additional_exclu
             return False
     return True
 
+def filter_glue_dataset(
+    task_name, cache_dir,
+    use_auth_token=None,
+    aochildes_vocab_path="AOChildes_word_frequency.csv"
+):
+    """Filters GLUE datasets based on AOChildes vocabulary
+    Args:
+        task_name: name of GLUE dataset
+        cache_dir: dir where data is cached
+        use_auth_token: we will not need this mostly, but used by run_glue script
+        aochildes_vocab_path: the path of AOChildes vocabulary
+    """
+    datasets = load_dataset(
+        "glue",
+        task_name,
+        cache_dir=cache_dir,
+        use_auth_token=True if use_auth_token else None,
+    )
+    vocab_freq = pd.read_csv(aochildes_vocab_path)
+    vocab_set = set(vocab_freq['word'])
+    contractions = set(['nt','s','re','t','d','ll'])
+    for key in datasets.keys():
+        datasets[key] = datasets[key].filter(lambda example: filter_example(example, vocab_set, contractions))
+    return datasets
 
 def filter_dataset(core_dataset,
     task_name, cache_dir, 
@@ -92,6 +116,7 @@ def filter_dataset(core_dataset,
             use_auth_token=True if use_auth_token else None,
         )
     else:
+        task_name = core_dataset
         datasets = load_dataset(
             core_dataset,
             cache_dir=cache_dir,
