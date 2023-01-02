@@ -108,6 +108,15 @@ class DataTrainingArguments:
             )
         },
     )
+    load_best_model_at_end: Optional[bool] = field(
+        default=False, metadata={"help": "Load the best model at the end."}
+    )
+    save_total_limit: Optional[int] = field(
+        default=None, metadata={"help": "max number of checkpoint saves"}
+    )
+    save_strategy: Optional[str] = field(
+        default=None, metadata={"help": "whether to save checkpoints"}
+    )
     max_train_samples: Optional[int] = field(
         default=None,
         metadata={
