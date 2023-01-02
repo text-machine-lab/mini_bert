@@ -108,15 +108,6 @@ class DataTrainingArguments:
             )
         },
     )
-    load_best_model_at_end: Optional[bool] = field(
-        default=False, metadata={"help": "Load the best model at the end."}
-    )
-    save_total_limit: Optional[int] = field(
-        default=None, metadata={"help": "max number of checkpoint saves"}
-    )
-    save_strategy: Optional[str] = field(
-        default=None, metadata={"help": "whether to save checkpoints"}
-    )
     max_train_samples: Optional[int] = field(
         default=None,
         metadata={
@@ -516,6 +507,11 @@ def main():
         data_collator = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8)
     else:
         data_collator = None
+
+    training_args.load_best_model_at_end = True
+    training_args.save_total_limit=2
+    training_args.save_strategy = "no"
+    training_args.evaluation_strategy = "epoch"
 
     # Initialize our Trainer
     trainer = Trainer(
