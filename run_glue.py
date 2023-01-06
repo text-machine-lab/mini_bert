@@ -44,7 +44,9 @@ from transformers import (
 from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version
 from transformers.utils.versions import require_version
-
+from LMModel import (
+    load_model_for_finetuning
+)
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 #check_min_version("4.25.0.dev0")
@@ -343,7 +345,20 @@ def main():
             label_list = raw_datasets["train"].unique("label")
             label_list.sort()  # Let's sort it for determinism
             num_labels = len(label_list)
-
+    
+    # @TODO:
+    """
+    config, model = load_model_for_finetuning(
+        run_name=args.run_name
+        config_name=model_args.config_name if model_args.config_name else model_args.model_name_or_path,,
+        num_labels=num_labels,
+        finetuning_task=data_args.task_name,
+        cache_dir=model_args.cache_dir,
+        revision=model_args.model_revision,
+        use_auth_token=True if model_args.use_auth_token else None
+    )
+    """
+    
     # Load pretrained model and tokenizer
     #
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
