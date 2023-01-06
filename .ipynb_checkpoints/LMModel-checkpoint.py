@@ -118,10 +118,10 @@ class LanModelSequenceClassification(PreTrainedModel):
         return
         
     def forward(self, **kwargs):
-        outputs = self.model(**kwargs)
+        outputs = self.model(kwargs.input_ids)
         logits = self.head_sequence_classification(outputs.last_hidden_state)
         
-        return outputs
+        return logits
 
 def load_model_for_finetuning(
     run_name
