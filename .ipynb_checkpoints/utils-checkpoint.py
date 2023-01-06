@@ -42,7 +42,7 @@ def filter_example(example, vocab_set, contractions, additional_exclusions=True)
         if word not in vocab_set:
             return False
     return True
-        
+
 
 def filter_glue_dataset(
     task_name, cache_dir, 
@@ -108,4 +108,21 @@ def sample_small_debug_dataset(raw_datasets, sample_size):
     return raw_datasets
 
 def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+    par_emb = 0
+    par_non_emb = 0
+    
+    for name, par in model.named_parameters():
+        if par.requires_grad:
+            if 'embedding' in name:
+                par_emb += par.numel()
+            else:
+                par_non_emb += par.numel()
+    
+    #
+    total_par = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    
+    return {
+        "Embedding parameters": par_emb, 
+        "Non-embedding parameters": par_non_emb, 
+        "Total parameters": total_par,
+    }

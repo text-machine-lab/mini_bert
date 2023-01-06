@@ -6,7 +6,7 @@ import transformers
 import logging
 import wandb
 import utils
-import train_wnli
+#import train_wnli
 import LMData
 import json
 import time
@@ -32,6 +32,8 @@ from torch.utils.data import DataLoader
 from datasets import load_from_disk, DatasetDict
 from tqdm.auto import tqdm
 import os
+from copy import deepcopy
+from LMModel import LanModel, LanModelConfig
 
 class LMTrainer():
     
@@ -51,26 +53,28 @@ class LMTrainer():
         self.train_dataloader = dataloaders.dataloader['train']
         self.eval_dataloader = dataloaders.dataloader['validation']
         self.test_dataloader = dataloaders.dataloader['test']
+        self.get_steps(args)
         
         # step 3: get model
         self.model = self.get_model(args=args)
         self.model_size = utils.count_parameters(self.model)
+        args.model_size = self.model_size
         
         # step 4: define the objective function
         self.criterion = torch.nn.CrossEntropyLoss(ignore_index=-100)
-        self.criterion.to(self.device)
+        self.criterion.to(self.device)        
         
         # step 5: define optimizer
+        self.adjusted_lr = self.get_adjusted_lr(args)
         self.optimizer = torch.optim.AdamW(
             params=self.model.parameters(), 
-            lr=args.learning_rate, 
+            lr=self.adjusted_lr, 
             betas=(args.beta1, args.beta2),
             weight_decay=args.weight_decay,
             #amsgrad=True,
         )
         
         # step 6: define LR scheduler
-        self.get_steps(args)
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(
             self.optimizer, 
             lr_lambda=self.inverse_sqrt_w_warmup
@@ -92,6 +96,20 @@ class LMTrainer():
         
         
         return
+    
+    def get_adjusted_lr(
+        self, 
+        args
+    ):
+        
+        # NOTE
+        # This works only when we use NOAM scheduler without the model size parameter
+        
+        #
+        target_lr = args.learning_rate
+        adjusted_lr = target_lr * (self.num_warmup_steps ** 0.5)
+        
+        return adjusted_lr
     
     def load_wiki_data(
         self,
@@ -200,6 +218,7 @@ class LMTrainer():
             validation_size=args.validation_size,
             fixed_seed_val=args.fixed_seed_val,
             debug=args.debug,
+            args=args,
         )
         dataloaders.check_dataloader()
     
@@ -217,28 +236,59 @@ class LMTrainer():
     
     def get_model(
         self,
-        args
+        args,
+        read_checkpoint=False,
     ):
         
         print('\nInitializing model...')
         #
-        if not args.restart:
+        if not read_checkpoint:
             # In the model, we want to follow the babyBerta configuration with our vocab size
             model = RobertaForMaskedLM.from_pretrained('phueb/BabyBERTa-3')
             #model = AlbertForMaskedLM.from_pretrained('albert-base-v2')
             config = model.config
             config.vocab_size = len(self.tokenizer) + 10 # + x is for special tokens
-            config.num_hidden_layers = 8
-            config.num_attention_heads = 8
+            config.num_hidden_layers = args.num_hidden_layers#8
+            config.num_attention_heads = args.num_attention_heads#8
             config.attention_probs_dropout_prob = 0.1
             config.hidden_dropout_prob = 0.1
-            config.hidden_size = 256
-            config.intermediate_size = 1024
+            config.hidden_size = args.hidden_size#256
+            config.intermediate_size = args.intermediate_size#1024
             model = RobertaForMaskedLM(config=config)
             #model = AlbertForMaskedLM(config=config)
         else:
             print(f'Reading previous checkpoint from {args.checkpoint_dir}')
             model = RobertaForMaskedLM.from_pretrained(args.checkpoint_dir)
+        model.to(args.device)
+        
+        # initialize weights of the model
+        model = self.init_weights(
+            model=model, 
+            fixed_seed_val=args.fixed_seed_val
+        )
+        
+        return model
+    
+    def get_model_new(
+        self,
+        args,
+        read_checkpoint=False,
+    ):
+        print('\nInitializing model...')
+        #
+        if not read_checkpoint:
+            config = LanModelConfig(
+                embedding_size=args.embedding_size,
+                hidden_size=args.hidden_size,
+                intermediate_size=args.intermediate_size,
+                num_attention_head=args.num_attention_heads,
+                num_hidden_layers=args.num_hidden_layers,
+            )
+            model = LanModel(config=config)
+        else:            
+            model = AutoModel.from_pretrained(args.checkpoint_dir)
+        
+        #
         model.to(args.device)
         
         # initialize weights of the model
@@ -313,7 +363,13 @@ class LMTrainer():
         step = 1 if step == 0 else step
         factor = min(step**(-1 * 0.5), step * self.num_warmup_steps**(-1 * 1.5))
         
-        return factor * (self.model_size ** (-1 * 0.5))
+        # default return value is as follows
+        # factor * (self.model_size ** (-1 * 0.5))
+        
+        # But we want the LR schedule to be independent of the model size, so we return the following
+        # factor * (1)
+        
+        return factor
         
         
     def get_steps(
@@ -374,7 +430,7 @@ class LMTrainer():
                 
                 # loss
                 loss = model_output.loss
-                logits = model_output.logits
+                #logits = model_output.logits
                 total_eval_loss += loss
                 
                 #
@@ -437,14 +493,31 @@ class LMTrainer():
         logger.info(f"  Gradient accumulation steps = {args.grad_acc_steps}")
         logger.info(f"  Maximum learning rate value = {args.learning_rate}")
         
+        # when to save checkpoints
+        save_batch_indices = []
+        for percent in range(0, 101, 10):
+            save_batch_indices.append(int(np.floor(len(train_dataloader) * percent / 100)))
+        
+        #
+        return_metrics = {
+            'eval/step': [],
+            'eval/batch_idx': [],
+            'eval/updates': [],
+            'eval/epoch': [],
+            'eval/perplexity': [],
+            'eval/loss': [],
+            'test/perplexity': -1,
+            'test/loss': -1,
+        }
         
         #
         global_step = 0
+        updates = 0
         eval_met_perp = float('inf')
         optimizer.zero_grad()
         for epoch in range(self.num_train_epochs):
             model.train()
-            for batch in train_dataloader:
+            for batch_idx, batch in enumerate(train_dataloader):
                 
                 # break if
                 if global_step >= args.max_steps:
@@ -458,19 +531,17 @@ class LMTrainer():
                 
                 # loss calculation
                 # NOTE: loss = loss_, CHECKED
-                loss = outputs.loss
-                #logits = outputs.logits.permute((0, 2, 1))
-                #loss_ = criterion(logits, labels)
-                #print(((loss - loss_) / loss) * 100)
-                
+                loss = outputs.loss     
+                #loss = criterion(outputs.logits, batch["labels"])
                 
                 # perform gradient accumulation
                 loss_acc = loss / args.grad_acc_steps
                 loss_acc.backward()
-                if ((global_step%args.grad_acc_steps) == 0) or ((global_step+1) == args.max_train_steps):
+                if ((global_step%args.grad_acc_steps) == 0) or ((batch_idx+1) == len(train_dataloader)):
                     optimizer.step()
                     lr_scheduler.step()
                     optimizer.zero_grad()
+                    updates += 1
                 
                 # update progress bar
                 progress_bar.update(1)
@@ -492,6 +563,7 @@ class LMTrainer():
                             "MLMTraining/loss": loss,
                             "MLMTraining/learning_rate": lr_val,
                             "MLMTraining/epoch": epoch,
+                            "MLMTraining/par_updates": updates,
                         },
                         step=global_step,
                     )
@@ -502,7 +574,7 @@ class LMTrainer():
                     
                 
                 # evalulate model
-                if (global_step % args.eval_every_steps == 0) or ((global_step+1) == args.max_train_steps):
+                if (global_step % args.eval_every_steps == 0) or ((batch_idx+1) == len(train_dataloader)):
                     metrics = self.eval_model(model, eval_dataloader, args.debug)
                     
                     #
@@ -514,23 +586,63 @@ class LMTrainer():
                     
                     if eval_met_perp > metrics['MLMEval/perplexity']:
                         eval_met_perp = metrics['MLMEval/perplexity']
-                        logger.info("Saving model checkpoint to %s", args.output_dir)
-                        model.save_pretrained(args.output_dir)
-                        logger.info(f"model saved in {args.output_dir}")
+                        logger.info("Saving model checkpoint to %s", os.path.join(args.output_dir, "best_model"))
+                        model.save_pretrained(
+                            os.path.join(
+                                args.output_dir,
+                                "best_model",
+                            )
+                        )
+                        best_model = deepcopy(model)
+                            
+                    # save values
+                    return_metrics['eval/perplexity'].append(metrics['MLMEval/perplexity'])
+                    return_metrics['eval/loss'].append(metrics['MLMEval/loss'])
+                    return_metrics['eval/step'].append(global_step)
+                    return_metrics['eval/epoch'].append(epoch)
+                    return_metrics['eval/batch_idx'].append(batch_idx)
+                    return_metrics['eval/updates'].append(updates)
+                    
                 
                 # save model checkpoint
                 if (global_step % args.save_checkpoint_evey_steps == 0):
-                    model.save_pretrained(os.path.join(args.output_dir, f'checkpoint_at_{global_step}'))
+                    model.save_pretrained(
+                        os.path.join(
+                            args.output_dir,
+                            "other_checkpoints",
+                            f'checkpoint_at_{global_step}'
+                        )
+                    )
+                
+                # save checkpoint with specific amount of data
+                if int(batch_idx) in save_batch_indices:
+                    percent_data = int((batch_idx / len(train_dataloader)) * 100)
+                    model.save_pretrained(
+                        os.path.join(
+                            args.output_dir,
+                            "data_gradient_checkpoints",
+                            f'checkpoint_trained_with_{percent_data}%_data',
+                        )
+                    )
+        
+        # load the best model
+        # saving a best_model instance instead of loading 
         
         # evaluate on test split
-        metrics = self.eval_model(model, self.test_dataloader, args.debug)
+        metrics_test = self.eval_model(best_model, self.test_dataloader, args.debug)
         wandb.log(
             {
-                'MLMTest/loss': metrics["MLMEval/loss"],
-                'MLMTest/perplexity': metrics["MLMEval/perplexity"],
+                'MLMTest/loss': metrics_test["MLMEval/loss"],
+                'MLMTest/perplexity': metrics_test["MLMEval/perplexity"],
             }, 
             step=global_step
         )
+        
+        #
+        return_metrics['test/perplexity'] = metrics_test["MLMEval/perplexity"]
+        return_metrics['test/loss'] = metrics_test["MLMEval/loss"]
+        for k_, v_ in self.model_size.items():
+            return_metrics[k_] = v_
+        
                 
-                
-        return model
+        return return_metrics

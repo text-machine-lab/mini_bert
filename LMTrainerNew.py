@@ -56,7 +56,7 @@ class LMTrainer():
         self.get_steps(args)
         
         # step 3: get model
-        self.model = self.get_model(args=args)
+        self.model = self.get_model_new(args=args)
         self.model_size = utils.count_parameters(self.model)
         args.model_size = self.model_size
         
@@ -283,6 +283,7 @@ class LMTrainer():
                 intermediate_size=args.intermediate_size,
                 num_attention_head=args.num_attention_heads,
                 num_hidden_layers=args.num_hidden_layers,
+                vocab_size=len(self.tokenizer) + 10,
             )
             model = LanModel(config=config)
         else:            
@@ -328,10 +329,10 @@ class LMTrainer():
 
         for name_, par_ in model.named_parameters():
             if not (('LayerNorm' in name_) or ('layer_norm') in name_):
-                if 'weight' in name_:
+                if par_.dim() >= 2:
                     # Xavier init for weight parameters
                     torch.nn.init.xavier_normal_(par_)
-                elif 'bias' in name_:
+                else:
                     # const init for bias
                     torch.nn.init.constant_(par_, 0.01)
             else:
@@ -407,7 +408,8 @@ class LMTrainer():
     
     def eval_model(
         self,
-        model, 
+        model,
+        criterion,
         eval_dataloader, 
         debug
     ):
@@ -426,11 +428,10 @@ class LMTrainer():
                 batch = {k_: v_.to(self.device) for k_, v_ in batch.items()}
                 
                 # forward pass
-                model_output = model(**batch)
+                outputs = model(batch['input_ids'])
                 
                 # loss
-                loss = model_output.loss
-                #logits = model_output.logits
+                loss = criterion(outputs.logits.permute(0, 2, 1), batch["labels"])
                 total_eval_loss += loss
                 
                 #
@@ -527,12 +528,12 @@ class LMTrainer():
                 batch = {k_: v_.to(self.device) for k_, v_ in batch.items()}
                 
                 # forward pass
-                outputs = model(**batch)
+                outputs = model(batch['input_ids'])
                 
                 # loss calculation
                 # NOTE: loss = loss_, CHECKED
-                loss = outputs.loss     
-                #loss = criterion(outputs.logits, batch["labels"])
+                #loss = outputs.loss     
+                loss = criterion(outputs.logits.permute(0, 2, 1), batch["labels"])
                 
                 # perform gradient accumulation
                 loss_acc = loss / args.grad_acc_steps
@@ -575,7 +576,12 @@ class LMTrainer():
                 
                 # evalulate model
                 if (global_step % args.eval_every_steps == 0) or ((batch_idx+1) == len(train_dataloader)):
-                    metrics = self.eval_model(model, eval_dataloader, args.debug)
+                    metrics = self.eval_model(
+                        model=model, 
+                        criterion=criterion,
+                        eval_dataloader=eval_dataloader, 
+                        debug=args.debug
+                    )
                     
                     #
                     wandb.log(metrics, step=global_step)
@@ -629,7 +635,14 @@ class LMTrainer():
         # saving a best_model instance instead of loading 
         
         # evaluate on test split
-        metrics_test = self.eval_model(best_model, self.test_dataloader, args.debug)
+        metrics_test = self.eval_model(
+            model=best_model, 
+            criterion=criterion,
+            eval_dataloader=self.test_dataloader, 
+            debug=args.debug
+        )
+        
+        #
         wandb.log(
             {
                 'MLMTest/loss': metrics_test["MLMEval/loss"],

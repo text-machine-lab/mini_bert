@@ -8,11 +8,14 @@ import time
 import torch
 import transformers
 import numpy as np
+import pandas as pd
 import os
 from pathlib import Path
 from functools import partial
 from tqdm.auto import tqdm
 from LMTrainer import LMTrainer
+import time
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 """
 logger = logging.getLogger(__file__)
@@ -77,7 +80,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_path",
         type=str,
-        default="/home/shree/mini_bert/mini_bert/data/formatted_data_new",
+        default="./pretraining_data_01Jan2022",
         help="path to raw dataset",
     )
     parser.add_argument(
@@ -104,7 +107,7 @@ def parse_args():
     parser.add_argument(
         "--tokenizer_path",
         type=str,
-        default="./tokenizer_selection_scripts/Tokenizer_files/roberta-base_17000",
+        default="./tokenizer_selection_scripts/Tokenizer_files/roberta-base_19000",
         help="path to tokenizer.  If not provided, default BERT tokenizer will be used.",
     )
 
@@ -118,7 +121,7 @@ def parse_args():
     parser.add_argument(
         "--fixed_seed_val",
         type=int,
-        default=1,
+        default=0,
         help="Value of the seed to use for data splitting and weights init",
     )
 
@@ -138,6 +141,30 @@ def parse_args():
              "during ``evaluate`` and ``predict``.",
     )
     parser.add_argument(
+        "--num_hidden_layers",
+        type=int,
+        default=8,
+        help="Number of hidden layers of transformer blocks",
+    )
+    parser.add_argument(
+        "--num_attention_heads",
+        type=int,
+        default=8,
+        help="Number of attention heads in each of the transformer blocks",
+    )
+    parser.add_argument(
+        "--hidden_size",
+        type=int,
+        default=256,
+        help="dimension of embeddings and hidden vectors",
+    )
+    parser.add_argument(
+        "--intermediate_size",
+        type=int,
+        default=1024,
+        help="dimension of intermediate hidden vectors for Q, K and V",
+    )    
+    parser.add_argument(
         "--preprocessing_num_workers",
         type=int,
         default=8,
@@ -149,7 +176,9 @@ def parse_args():
         default=False,
         help="Overwrite the cached training and evaluation sets",
     )
-
+    
+    
+    
     # Training arguments
     parser.add_argument(
         "--device",
@@ -166,13 +195,13 @@ def parse_args():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=320,
+        default=256,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
         "--eval_batch_size",
         type=int,
-        default=16,
+        default=256,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
@@ -184,7 +213,7 @@ def parse_args():
     parser.add_argument(
         "--learning_rate",
         type=float,
-        default=0.01,
+        default=0.0005,
         help="highest learning rate value.",
     )
     parser.add_argument(
@@ -217,7 +246,7 @@ def parse_args():
     parser.add_argument(
         "--glue_beta2",
         type=float,
-        default=0.999,
+        default=0.98,
         help="Beta2 to use for Adam.",
     )
     parser.add_argument(
@@ -236,21 +265,21 @@ def parse_args():
     parser.add_argument(
         "--grad_acc_steps",
         type=int,
-        default=25,
+        default=1,
         help="Accumulate gradient for these many steps",
     )
     
     parser.add_argument(
         "--eval_every_steps",
         type=int,
-        default=200,
+        default=1000,
         help="Perform evaluation every n network updates.",
     )
     
     parser.add_argument(
         "--save_checkpoint_evey_steps",
         type=int,
-        default=3000,
+        default=4000,
         help="Save model checkpoint",
     )
     
@@ -303,18 +332,30 @@ def parse_args():
 
     parser.add_argument(
         "--wandb_project",
-        default="mini_bert_fixed_seed",
+        default="mini_bert_ACL",
         help="wandb project name to log metrics to",
     )
-
-    args = parser.parse_args()
+    
+    #
+    args, unknownargs = parser.parse_known_args()
 
     return args
 
 
-
-def main():
+def one_run(
+    embedding_size=256,
+    hidden_size=256,
+    num_attention_heads=8,
+    num_hidden_layers=8,
+    intermediate_size=1024,
+):
     args = parse_args()
+    
+    #
+    args.hidden_size = hidden_size
+    args.num_attention_heads = num_attention_heads
+    args.num_hidden_layers = num_hidden_layers
+    args.intermediate_size = intermediate_size
     
     # fix seed
     torch.manual_seed(args.fixed_seed_val)
@@ -323,7 +364,7 @@ def main():
     transformers.set_seed(args.fixed_seed_val)
     
     # set device
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.device_index
+    #os.environ["CUDA_VISIBLE_DEVICES"] = '1'#args.device_index
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args.device = device
     
@@ -334,6 +375,8 @@ def main():
     args.output_dir = os.path.join(args.output_dir, wandb.run.name)
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
+    args.run_name = wandb.run.name
+    
     
     # init everything (tokenizer, dataloader, model, criterion, optimizer and scheduler)
     LM_trainer = LMTrainer(args)
@@ -345,12 +388,7 @@ def main():
         LM_trainer.model.save_pretrained(os.path.join(args.output_dir, 'random_model'))
     
     # train the model
-    if not args.eval_random_model:
-        # start training
-        trained_model = LM_trainer.train_model(args)
-    else:
-        trained_model = LM_trainer.model
-    
+    metrics = LM_trainer.train_model(args)
     
     # evaluation on GLUE
     # -log GLUE metrics on wandb
@@ -360,10 +398,121 @@ def main():
     wandb.finish()
     #logger.info(f"***** FINSHED TRAINING AND EVAL *****")
     
+    #
+    metrics['run_name'] = args.run_name
+    
+    return metrics
+
+def start_experiment():
+    
+    #
+    timestamp_ = int(time.time())
+    
+    #
+    features_to_vary = {
+        #'embedding_size': [256],
+        #'hidden_size': [32, 64, 128],
+        #'num_hidden_layers': [1, 2, 4],
+        'num_attention_heads': [1, 2, 4],
+        'intermediate_size': [128, 256, 512],
+    }
+    total_runs = sum([features_to_vary[k_].__len__() for k_ in features_to_vary])
+    
+    # to save test results
+    test_results = pd.DataFrame(
+        -1,
+        index=range(total_runs),
+        columns=[
+            "run number",
+            "embedding_size",
+            "hidden_size",
+            "intermediate_size",
+            "num_attention_heads",
+            "num_hidden_layers",
+            "Embedding parameters",
+            "Non-embedding parameters",
+            "Total parameters",
+        ],
+    )
+    
+    # to save eval results
+    eval_results = pd.DataFrame(
+        -1,
+        index=range(total_runs * 30000),
+        columns=[
+            "eval/perplexity",
+            "eval/loss",
+            "eval/step",
+            "eval/epoch",
+            "eval/batch_idx",
+            "eval/updates",
+        ],
+    )    
+    
+    #
+    run_idx = -1
+    for feature in features_to_vary:        
+        #
+        for feature_val in features_to_vary[feature]:
+            if (feature == "num_attention_heads"):
+                print(f"Skipping, {feature}, {feature_val}")
+                continue
+            
+            if (feature == "intermediate_size") and (feature_val == 128):
+                print(f"Skipping, {feature}, {feature_val}")
+                continue
+            
+            #
+            run_idx += 1
+            
+            #
+            input_config = {
+                "embedding_size": 256,
+                "hidden_size": 256,
+                "intermediate_size": 1024,
+                "num_attention_heads": 8,
+                "num_hidden_layers": 8,
+            }
+            input_config[feature] = feature_val
+            
+            #
+            print(f"\nStarting run with following configuration")
+            print(input_config)
+            print('\n')
+            metrics = one_run(**input_config)
+            
+            # save input configuration
+            for k_, v_ in input_config.items():
+                test_results.loc[run_idx, k_] = v_
+            
+            # save test results
+            for k_, v_ in metrics.items():
+                if not 'eval/' in k_:
+                    test_results.loc[run_idx, k_] = v_
+            
+            # save eval results
+            for k_, v_ in metrics.items():
+                if 'eval/' in k_:
+                    len_ = len(v_)
+                    start = run_idx * len_
+                    end = start + len_ - 1
+                    eval_results.loc[start:end, k_] = v_
+                else:
+                    len_ = len(metrics['eval/perplexity'])
+                    start = run_idx * len_
+                    end = start + len_ - 1
+                    eval_results.loc[start:end, k_] = [v_] * len_
+                    
+            for k_, v_ in input_config.items():
+                eval_results.loc[start:end, k_] = [v_] * len_
+            
+            
+            # save
+            test_results.to_csv(f"experiment_results_test_{timestamp_}_head_intermediate.csv")
+            eval_results.to_csv(f"experiment_results_eval_{timestamp_}_head_intermediate.csv")
+            
     return
 
 
 if __name__ == "__main__":
-    main()
-
-# python3 train.py --beta2=0.95 --learning_rate=0.00005 --max_train_steps=1 --restart --output_dir=output_dir/dazzling-haze-202 --tokenizer_path=Sentence_13k --batch_size=10 --glue_learning_rate=0.01 --glue_epochs=100 --restart_for_fine_tuning
+    start_experiment()

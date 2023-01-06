@@ -72,6 +72,7 @@ class LMDataloader():
         validation_size=0.02,
         fixed_seed_val=0,
         debug=False,
+        args=None,
     ):
         
         """
@@ -188,9 +189,15 @@ class LMDataloader():
         """
         self.dataloader = {}
         for split in ['train', 'validation', 'test']:#self.dataset:
+            if (not split == 'train') and (not args == None):
+                bs_ = args.eval_batch_size
+            else:
+                bs_ = batch_size
+            
+            #
             self.dataloader[split] = DataLoader(
                 self.dataset[split],
-                batch_size=batch_size,
+                batch_size=bs_,
                 shuffle=False,
                 collate_fn=self.custom_collation, #collator_obj, #self.custom_collation
             )

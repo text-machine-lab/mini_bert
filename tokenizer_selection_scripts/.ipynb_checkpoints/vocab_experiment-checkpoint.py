@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 import os
 
 
@@ -110,17 +110,17 @@ def calculate_unk_occurances(tok_in):
 
 def get_iterator(dict_data):
     list_sents = []
-    for k in dict_data.keys():
-        list_sents.append(dict_data[k]['TEXT'])
+    for split in ['train', 'test', 'validation']:
+        list_sents += dict_data[split]['TEXT']
     
     return list_sents
 
-def get_random_examples(data_in, size):
-    
-    indices = np.random.choice(list(data_in.keys()), size)
+def get_random_examples(list_in, size):
+    print(type(list_in))
+    indices = np.random.choice(range(len(list_in)), size, replace=False)
     data_sampled = []
     for index in indices:
-        data_sampled.append(data_in[index]['TEXT'])
+        data_sampled.append(list_in[index])
     
     return data_sampled
 
@@ -186,8 +186,13 @@ def score_tokenizer_output(tok_in):
 def run_vocabulary_experiment():
     
     # read pre-training data
+    """
     with open('./../../../../from_shala/vocabulary_analysis/data_filtration/Filtration_15Nov2022/ALL_FILTERED_DATA/processed_data.json', 'r') as f:
         data = json.load(f)
+    """
+    print(f"\nReading data...")
+    data = load_from_disk('./../pretraining_data_01Jan2022')
+    print("DONE!")
 
     #
     tokens_special = ['<s>', '</s>', '<mask>', '<pad>', '<unk>', '<cls>'] + [f'<extra_id_{i}>' for i in range(0, 100)]
@@ -196,16 +201,16 @@ def run_vocabulary_experiment():
     tokenizer_names = [
         #'BPE',
         #'WordPiece',
-        'SentencePiece',
+        #'SentencePiece',
         #'bert-base-uncased',
         #'phueb/BabyBERTa-1', 
         #'prajjwal1/bert-tiny', 
         #'distilbert-base-uncased', 
-        #'roberta-base',
+        'roberta-base',
         #'t5-base',
         #'albert-base-v2',
     ]
-    vocab_sizes = [16600, 16800, 17000, 17200, 17400, 17600, 17800]#[i for i in range(5000, 15001, 1000)]
+    vocab_sizes = [18600, 18700, 18800, 18900, 19100, 19200]#[i for i in range(5000, 15001, 1000)]
     total_exp = (len(tokenizer_names) * len(vocab_sizes)) + (len(tokenizer_names))
     df_exp = pd.DataFrame(
         -1,
@@ -214,8 +219,13 @@ def run_vocabulary_experiment():
     )
 
     # get iterator
+    print(f"\nCreating an iterator from the data...")
     iterator = get_iterator(data)
-    sampled_examples = get_random_examples(data, 5000)
+    print("DONE!")
+    print(f"\nSampling examples for evaluation...")
+    sampled_examples = get_random_examples(iterator, 5000)
+    print("DONE!")
+    
 
     #
     tokenizers = {}
@@ -295,7 +305,7 @@ def run_vocabulary_experiment():
             #    df_exp.loc[df_idx, subset] = unk_count[subset]
             
         # save data
-        df_exp.to_csv('Vocabulary_experiment_results_15Nov22_.csv')
+        df_exp.to_csv('Vocabulary_experiment_results_02Jan23_granular.csv')
     
     return
 
@@ -388,6 +398,6 @@ def plot_compare_vocabulary_sizes(df_in, tok_type):
     return
     
 
-#if __name__ == '__main__':
-#    run_vocabulary_experiment()
+if __name__ == '__main__':
+    run_vocabulary_experiment()
     

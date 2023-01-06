@@ -13,9 +13,9 @@ import os
 from pathlib import Path
 from functools import partial
 from tqdm.auto import tqdm
-from LMTrainer import LMTrainer
+from LMTrainerNew import LMTrainer
 import time
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
 """
 logger = logging.getLogger(__file__)
@@ -195,19 +195,19 @@ def parse_args():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=256,
+        default=128,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
         "--eval_batch_size",
         type=int,
-        default=256,
+        default=128,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
         "--sample_size",
         type=int,
-        default=100,
+        default=1000,
         help="Number of data items to use when debugging.",
     )
     parser.add_argument(
@@ -265,21 +265,21 @@ def parse_args():
     parser.add_argument(
         "--grad_acc_steps",
         type=int,
-        default=1,
+        default=2,
         help="Accumulate gradient for these many steps",
     )
     
     parser.add_argument(
         "--eval_every_steps",
         type=int,
-        default=1000,
+        default=2000,
         help="Perform evaluation every n network updates.",
     )
     
     parser.add_argument(
         "--save_checkpoint_evey_steps",
         type=int,
-        default=4000,
+        default=8000,
         help="Save model checkpoint",
     )
     
@@ -352,10 +352,11 @@ def one_run(
     args = parse_args()
     
     #
+    args.embedding_size = embedding_size
     args.hidden_size = hidden_size
+    args.intermediate_size = intermediate_size
     args.num_attention_heads = num_attention_heads
     args.num_hidden_layers = num_hidden_layers
-    args.intermediate_size = intermediate_size
     
     # fix seed
     torch.manual_seed(args.fixed_seed_val)
@@ -381,6 +382,22 @@ def one_run(
     # init everything (tokenizer, dataloader, model, criterion, optimizer and scheduler)
     LM_trainer = LMTrainer(args)
     print(f'Size of the model is: {LM_trainer.model_size}')
+    
+    """
+    # @TODO: delete this when done
+    for name, module in LM_trainer.model.named_modules():
+        if 'emb2hidden' == name:
+            print(f"\n{name}")
+            print(module)
+        
+        if "embeddings" == name:
+            print(f"\n{name}")
+            print(module)
+        
+        #if 'layer.0' in name:
+        #    print(f"\n{name}")
+        #    print(module)
+    """
     
     # save random model for testing performance on random model
     if args.save_random_model:
@@ -410,11 +427,11 @@ def start_experiment():
     
     #
     features_to_vary = {
-        #'embedding_size': [256],
+        #'embedding_size': [32, 64, 128],
         #'hidden_size': [32, 64, 128],
-        #'num_hidden_layers': [1, 2, 4],
-        'num_attention_heads': [1, 2, 4],
-        'intermediate_size': [128, 256, 512],
+        'num_hidden_layers': [1, 2, 4],
+        #'num_attention_heads': [1, 2, 4],
+        #'intermediate_size': [128, 256, 512],
     }
     total_runs = sum([features_to_vary[k_].__len__() for k_ in features_to_vary])
     
@@ -454,11 +471,7 @@ def start_experiment():
     for feature in features_to_vary:        
         #
         for feature_val in features_to_vary[feature]:
-            if (feature == "num_attention_heads"):
-                print(f"Skipping, {feature}, {feature_val}")
-                continue
-            
-            if (feature == "intermediate_size") and (feature_val == 128):
+            if (feature == "num_attention_heads") and (feature_val != 4):
                 print(f"Skipping, {feature}, {feature_val}")
                 continue
             
@@ -508,11 +521,13 @@ def start_experiment():
             
             
             # save
-            test_results.to_csv(f"experiment_results_test_{timestamp_}_head_intermediate.csv")
-            eval_results.to_csv(f"experiment_results_eval_{timestamp_}_head_intermediate.csv")
+            test_results.to_csv(f"experiment_results_test_{timestamp_}_hidden_layers.csv")
+            eval_results.to_csv(f"experiment_results_eval_{timestamp_}_hidden_layers.csv")
             
     return
 
 
 if __name__ == "__main__":
     start_experiment()
+
+# python3 train.py --beta2=0.95 --learning_rate=0.00005 --max_train_steps=1 --restart --output_dir=output_dir/dazzling-haze-202 --tokenizer_path=Sentence_13k --batch_size=10 --glue_learning_rate=0.01 --glue_epochs=100 --restart_for_fine_tuning
