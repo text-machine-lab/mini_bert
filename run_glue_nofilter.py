@@ -508,6 +508,11 @@ def main():
     else:
         data_collator = None
 
+    training_args.load_best_model_at_end = True
+    training_args.save_total_limit=2
+    training_args.save_strategy = "no"
+    training_args.evaluation_strategy = "epoch"
+
     # Initialize our Trainer
     trainer = Trainer(
         model=model,

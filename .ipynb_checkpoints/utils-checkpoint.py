@@ -14,9 +14,10 @@ def postprocess_text(preds, labels, original_code=None):
 
     return preds, labels
 
-def filter_example(example, vocab_set, contractions, additional_exclusions=True):
+def filter_example(task_name, example, vocab_set, contractions, additional_exclusions=True):
     """Filters a particular example in a dataset
     Args:
+        task_name: the task within a dataset
         example: an example in the dataset
         vocab_set: the set of aochildes vocabulary to filter by
         contractions: a list of contractions to be filtered out
@@ -25,11 +26,37 @@ def filter_example(example, vocab_set, contractions, additional_exclusions=True)
     features = example.keys()
     if 'sentence' in features:
         sentence = example['sentence']
-        
+        # bigbench
+    elif 'inputs' in features:
+        sentence = example['inputs']
+    elif 'sentence1' in features:
+        sentence = example['sentence1'] + " " + example['sentence2']
+    elif task_name in ['wsc', 'wsc.fixed', 'winogrande-xl']:
+        t1 = list(features)[0]
+        sentence = example[t1]
+    elif task_name in ['conll2003', 'race', 'ai2_arc', 'martn-nguyen/adversarial_nli']:
+        t1 = list(features)[1]
+        sentence = example[t1]
+    elif task_name in ['squad']:
+        t1 = list(features)[2]
+        t2 = list(features)[3]
+        sentence = example[t1] + " " + example[t2]
+    elif task_name == "swag":
+        t1 = list(features)[2]
+        t2 = list(features)[6]
+        t3 = list(features)[7]
+        t4 = list(features)[8]
+        t5 = list(features)[9]
+        sentence = example[t1] + " " + example[t2] + " " + example[t3] + " " + example[t4] + " " + example[t5]
+    elif task_name in ['copa', 'piqa']:
+        t1 = list(features)[0]
+        t2 = list(features)[1]
+        t3 = list(features)[2]
+        sentence = example[t1] + " " + example[t2] + " " + example[t3]
     else:
         t1 = list(features)[0]
         t2 = list(features)[1]
-        sentence = example[t1]+" "+example[t2]
+        sentence = example[t1] + " " + example[t2]
     
     new_sentence = sentence.split(' ')
             
@@ -42,7 +69,6 @@ def filter_example(example, vocab_set, contractions, additional_exclusions=True)
         if word not in vocab_set:
             return False
     return True
-
 
 def filter_glue_dataset(
     task_name, cache_dir, 
@@ -67,6 +93,40 @@ def filter_glue_dataset(
     contractions = set(['nt','s','re','t','d','ll'])
     for key in datasets.keys():
         datasets[key] = datasets[key].filter(lambda example: filter_example(example, vocab_set, contractions))
+    return datasets
+
+def filter_dataset(core_dataset,
+    task_name, cache_dir, 
+    use_auth_token=None, 
+    aochildes_vocab_path="../AOChildes_word_frequency.csv"
+):
+    """Filters datasets based on AOChildes vocabulary
+    Args:
+        core_dataset: name of core dataset
+        task_name: name of core dataset task name
+        cache_dir: dir where data is cached
+        use_auth_token: we will not need this mostly, but used by run_glue script
+        aochildes_vocab_path: the path of AOChildes vocabulary
+    """
+    if task_name:
+        datasets = load_dataset(
+            core_dataset,
+            task_name,
+            cache_dir=cache_dir,
+            use_auth_token=True if use_auth_token else None,
+        )
+    else:
+        task_name = core_dataset
+        datasets = load_dataset(
+            core_dataset,
+            cache_dir=cache_dir,
+            use_auth_token=True if use_auth_token else None,
+        )
+    vocab_freq = pd.read_csv(aochildes_vocab_path)
+    vocab_set = set(vocab_freq['word'])
+    contractions = set(['nt','s','re','t','d','ll'])
+    for key in datasets.keys():
+        datasets[key] = datasets[key].filter(lambda example: filter_example(task_name, example, vocab_set, contractions))
     return datasets
 
 def pad(sequence_list, pad_id):
