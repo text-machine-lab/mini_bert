@@ -124,7 +124,7 @@ class LanModelSequenceClassification(PreTrainedModel):
         return logits
 
 def load_model_for_finetuning(
-    run_name
+    run_name,
     config_name,
     num_labels,
     finetuning_task,
