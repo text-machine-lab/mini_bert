@@ -141,7 +141,7 @@ def load_model_for_finetuning(
     
     #
     config = LanModelConfig(**features)
-    config.config_name = cofig_name
+    config.config_name = config_name
     config.num_labels = num_labels
     config.finetuning_task = finetuning_task
     config.cache_dir = cache_dir
