@@ -191,7 +191,9 @@ def run_vocabulary_experiment():
         data = json.load(f)
     """
     print(f"\nReading data...")
-    data = load_from_disk('./../pretraining_data_01Jan2022')
+    path_data = './../pretraining_data_free_text_08Jan2022'
+    print(f"Reading data from {path_data}")
+    data = load_from_disk(path_data)
     print("DONE!")
 
     #
@@ -210,7 +212,7 @@ def run_vocabulary_experiment():
         #'t5-base',
         #'albert-base-v2',
     ]
-    vocab_sizes = [18600, 18700, 18800, 18900, 19100, 19200]#[i for i in range(5000, 15001, 1000)]
+    vocab_sizes = [40000, 45000]#[i for i in range(5000, 15001, 1000)]
     total_exp = (len(tokenizer_names) * len(vocab_sizes)) + (len(tokenizer_names))
     df_exp = pd.DataFrame(
         -1,
@@ -260,10 +262,10 @@ def run_vocabulary_experiment():
                 
                 #
                 #if vocab_size == 12000:
-                if not os.path.exists(os.path.join('./Tokenizer_files', f'{name}_{vocab_size}')):
-                    os.makedirs(os.path.join('./Tokenizer_files', f'{name}_{vocab_size}'))
+                if not os.path.exists(os.path.join('./Tokenizer_files_free_text', f'{name}_{vocab_size}')):
+                    os.makedirs(os.path.join('./Tokenizer_files_free_text', f'{name}_{vocab_size}'))
 
-                dir_save = os.path.join('./Tokenizer_files', f'{name}_{vocab_size}')
+                dir_save = os.path.join('./Tokenizer_files_free_text', f'{name}_{vocab_size}')
                 try:
                     tokenizer[f'{name}_{vocab_size}'].save_pretrained(dir_save)
                     print('save_pretrain')
@@ -305,7 +307,7 @@ def run_vocabulary_experiment():
             #    df_exp.loc[df_idx, subset] = unk_count[subset]
             
         # save data
-        df_exp.to_csv('Vocabulary_experiment_results_02Jan23_granular.csv')
+        df_exp.to_csv('Vocabulary_experiment_results_free_text_08Jan23_2.csv')
     
     return
 

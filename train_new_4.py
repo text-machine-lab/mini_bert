@@ -80,7 +80,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_path",
         type=str,
-        default="./pretraining_data_01Jan2022",
+        default="./pretraining_data_free_text_08Jan2022",
         help="path to raw dataset",
     )
     parser.add_argument(
@@ -107,7 +107,7 @@ def parse_args():
     parser.add_argument(
         "--tokenizer_path",
         type=str,
-        default="./tokenizer_selection_scripts/Tokenizer_files/roberta-base_19000",
+        default="./tokenizer_selection_scripts/Tokenizer_files_free_text/roberta-base_40000",#"./tokenizer_selection_scripts/Tokenizer_files/roberta-base_19000",
         help="path to tokenizer.  If not provided, default BERT tokenizer will be used.",
     )
 
@@ -521,8 +521,22 @@ def start_experiment():
             
             
             # save
-            test_results.to_csv(f"experiment_results_test_{timestamp_}_hidden_layers.csv")
-            eval_results.to_csv(f"experiment_results_eval_{timestamp_}_hidden_layers.csv")
+            test_results.to_csv(
+                os.path.join(
+                    ".",
+                    "CSV files with experiment results",
+                    "ModelConfig_free_text",
+                    f"experiment_results_test_{timestamp_}_{feature}_.csv"
+                )
+            )
+            eval_results.to_csv(
+                os.path.join(
+                    ".",
+                    "CSV files with experiment results",
+                    "ModelConfig_free_text",
+                    f"experiment_results_eval_{timestamp_}_{feature}_.csv"
+                )
+            )
             
     return
 

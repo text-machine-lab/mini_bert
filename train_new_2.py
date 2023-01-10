@@ -15,7 +15,7 @@ from functools import partial
 from tqdm.auto import tqdm
 from LMTrainerNew import LMTrainer
 import time
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
 """
 logger = logging.getLogger(__file__)
@@ -80,7 +80,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_path",
         type=str,
-        default="./pretraining_data_01Jan2022",
+        default="./pretraining_data_free_text_08Jan2022",
         help="path to raw dataset",
     )
     parser.add_argument(
@@ -107,7 +107,7 @@ def parse_args():
     parser.add_argument(
         "--tokenizer_path",
         type=str,
-        default="./tokenizer_selection_scripts/Tokenizer_files/roberta-base_19000",
+        default="./tokenizer_selection_scripts/Tokenizer_files_free_text/roberta-base_40000",#"./tokenizer_selection_scripts/Tokenizer_files/roberta-base_19000",
         help="path to tokenizer.  If not provided, default BERT tokenizer will be used.",
     )
 
@@ -195,7 +195,7 @@ def parse_args():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=128,
+        default=32,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
@@ -265,14 +265,14 @@ def parse_args():
     parser.add_argument(
         "--grad_acc_steps",
         type=int,
-        default=2,
+        default=8,
         help="Accumulate gradient for these many steps",
     )
     
     parser.add_argument(
         "--eval_every_steps",
         type=int,
-        default=2000,
+        default=8000,
         help="Perform evaluation every n network updates.",
     )
     
@@ -428,9 +428,9 @@ def start_experiment():
     #
     features_to_vary = {
         #'embedding_size': [32, 64, 128],
-        #'hidden_size': [32],
-        'num_hidden_layers': [4],
-        #'num_attention_heads': [1, 2, 4],
+        #'hidden_size': [32, 64, 128],
+        #'num_hidden_layers': [4],
+        'num_attention_heads': [1, 2, 4, 8],
         #'intermediate_size': [128, 256, 512],
     }
     total_runs = sum([features_to_vary[k_].__len__() for k_ in features_to_vary])
@@ -521,8 +521,22 @@ def start_experiment():
             
             
             # save
-            test_results.to_csv(f"experiment_results_test_{timestamp_}_hidden_layers_.csv")
-            eval_results.to_csv(f"experiment_results_eval_{timestamp_}_hidden_layers_.csv")
+            test_results.to_csv(
+                os.path.join(
+                    ".",
+                    "CSV files with experiment results",
+                    "ModelConfig_free_text",
+                    f"experiment_results_test_{timestamp_}_{feature}_.csv"
+                )
+            )
+            eval_results.to_csv(
+                os.path.join(
+                    ".",
+                    "CSV files with experiment results",
+                    "ModelConfig_free_text",
+                    f"experiment_results_eval_{timestamp_}_{feature}_.csv"
+                )
+            )
             
     return
 
@@ -649,7 +663,7 @@ def start_experiment_isoflops():
 
 
 if __name__ == "__main__":
-    #start_experiment()
-    start_experiment_isoflops()
+    start_experiment()
+    #start_experiment_isoflops()
 
 # python3 train.py --beta2=0.95 --learning_rate=0.00005 --max_train_steps=1 --restart --output_dir=output_dir/dazzling-haze-202 --tokenizer_path=Sentence_13k --batch_size=10 --glue_learning_rate=0.01 --glue_epochs=100 --restart_for_fine_tuning
