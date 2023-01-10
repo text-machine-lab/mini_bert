@@ -350,9 +350,9 @@ def main():
     #
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
-
+    model_n = model_args.model_name_or_path.split("/")[-2]
     config, model = load_model_for_finetuning(
-    run_name=model_args.model_name_or_path.split("/")[-1],
+    run_name=model_n,
     config_name = model_args.config_name if model_args.config_name else model_args.model_name_or_path,
     num_labels = num_labels,
     finetuning_task = data_args.task_name,
