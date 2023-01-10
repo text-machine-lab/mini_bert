@@ -92,7 +92,7 @@ def filter_glue_dataset(
     vocab_set = set(vocab_freq['word'])
     contractions = set(['nt','s','re','t','d','ll'])
     for key in datasets.keys():
-        datasets[key] = datasets[key].filter(lambda example: filter_example(example, vocab_set, contractions))
+        datasets[key] = datasets[key].filter(lambda example: filter_example(task_name, example, vocab_set, contractions))
     return datasets
 
 def filter_dataset(core_dataset,

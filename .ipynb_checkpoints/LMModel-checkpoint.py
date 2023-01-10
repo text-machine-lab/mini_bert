@@ -1,8 +1,10 @@
-import torch.nn as nn
+import torch
 import json
+import torch.nn as nn
 from transformers import PreTrainedModel, PretrainedConfig
 from transformers import AutoModel, AutoConfig
 from transformers.models.roberta.modeling_roberta import RobertaEmbeddings, RobertaEncoder, RobertaLMHead
+from typing import List, Optional, Tuple, Union
 
 class LanModelConfig(PretrainedConfig):
     model_type = 'roberta'
@@ -109,19 +111,52 @@ class LanModelSequenceClassification(PreTrainedModel):
         # start with embedding layer
         self.model = config.model
         
+        #
+        self.pooler = nn.Linear(
+            in_features=128,
+            out_features=1,
+        )
+        
         # add a linear layer for transforming embedding_size into hidden_size
         self.head_sequence_classification = nn.Linear(
             in_features=config.hidden_size,
             out_features=config.num_labels,
         )
         
+        #
+        self.criterion = nn.CrossEntropyLoss()
+        
         return
         
-    def forward(self, **kwargs):
-        outputs = self.model(kwargs.input_ids)
-        logits = self.head_sequence_classification(outputs.last_hidden_state)
+    def forward(
+        self, 
+        input_ids: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        token_type_ids: Optional[torch.Tensor] = None,
+        labels: Optional[torch.Tensor] = None,
+    ):
+        #print(kwargs.keys())
+        #print(kwargs['labels'])
+        outputs = self.model(input_ids)
+        outputs["pooler_output"] = self.pooler(outputs["last_hidden_state"].permute(0, 2, 1)).flatten(start_dim=1)
+        outputs["logits"] = self.head_sequence_classification(outputs["pooler_output"])
+        outputs["loss"] = self.criterion(outputs["logits"], labels)
         
-        return logits
+        #
+        """
+        print(type(outputs))
+        for k_, v_ in outputs.items():
+            print(f"\n{k_}:")
+            print(v_.shape)
+        #
+        print(f"\nlabels:")
+        print(labels.shape)
+        
+        #
+        print(outputs["loss"])
+        """
+        
+        return outputs
 
 def load_model_for_finetuning(
     run_name,
@@ -141,7 +176,7 @@ def load_model_for_finetuning(
     
     #
     config = LanModelConfig(**features)
-    config.config_name = cofig_name
+    #config.config_name = cofig_name
     config.num_labels = num_labels
     config.finetuning_task = finetuning_task
     config.cache_dir = cache_dir

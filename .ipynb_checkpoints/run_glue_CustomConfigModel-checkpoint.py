@@ -307,7 +307,7 @@ def main():
         for key in data_files.keys():
             logger.info(f"load a local file for {key}: {data_files[key]}")
 
-        if data_args.train_file.endswith(".csv"):
+        if data_args_file.endswith(".csv"):
             # Loading a dataset from local csv files
             raw_datasets = load_dataset(
                 "csv",
@@ -357,12 +357,7 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None
     )
-    """
     
-    # Load pretrained model and tokenizer
-    #
-    # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
-    # download model & vocab.
     config = AutoConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
         num_labels=num_labels,
@@ -371,13 +366,7 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-        cache_dir=model_args.cache_dir,
-        use_fast=model_args.use_fast_tokenizer,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
+    
     model = AutoModelForSequenceClassification.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -386,6 +375,31 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
         ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
+    )
+    """
+    
+    # Load pretrained model and tokenizer
+    #
+    # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
+    # download model & vocab.
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+        cache_dir=model_args.cache_dir,
+        use_fast=model_args.use_fast_tokenizer,
+        revision=model_args.model_revision,
+        use_auth_token=True if model_args.use_auth_token else None,
+    )
+    print(f"\nTokenizer, vocab size:")
+    print(tokenizer.vocab_size)
+    print(f"\n")
+    config, model = load_model_for_finetuning(
+        run_name=model_args.model_name_or_path.split('/')[-1],
+        config_name=model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+        num_labels=num_labels,
+        finetuning_task=data_args.task_name,
+        cache_dir=model_args.cache_dir,
+        revision=model_args.model_revision,
+        use_auth_token=True if model_args.use_auth_token else None
     )
 
 
@@ -446,15 +460,11 @@ def main():
 
     def preprocess_function(examples):
         # Tokenize the texts
-        print("="*100)
-        print(len(examples))
-        print(examples[0])
-        print("="*100)
         args = (
             (examples[sentence1_key],) if sentence2_key is None else (examples[sentence1_key], examples[sentence2_key])
         )
         result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
-
+        
         # Map labels to IDs (not necessary for GLUE tasks)
         if label_to_id is not None and "label" in examples:
             result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
@@ -502,6 +512,12 @@ def main():
     else:
         metric = evaluate.load("accuracy")
 
+    # @TODO: put changes made by Dan here
+    training_args.save_total_limit = 2
+    training_args.save_strategy = "no"
+    training_args.load_best_model_at_end = True
+    training_args.evaluation_strategy = "epoch"
+    
     # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
     # predictions and label_ids field) and has to return a dictionary string to float.
     def compute_metrics(p: EvalPrediction):
@@ -525,6 +541,12 @@ def main():
         data_collator = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8)
     else:
         data_collator = None
+    
+    #
+    print("="*100)
+    print(len(train_dataset))
+    print(train_dataset[0])
+    print("="*100)
 
     # Initialize our Trainer
     trainer = Trainer(
@@ -547,14 +569,17 @@ def main():
             checkpoint = training_args.resume_from_checkpoint
         elif last_checkpoint is not None:
             checkpoint = last_checkpoint
-        train_result = trainer.train(resume_from_checkpoint=checkpoint)
+        train_result = trainer.train(
+            resume_from_checkpoint=checkpoint, 
+            ignore_keys_for_eval=["last_hidden_state", "pooler_output"]
+        )
         metrics = train_result.metrics
         max_train_samples = (
             data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
         )
         metrics["train_samples"] = min(max_train_samples, len(train_dataset))
 
-        trainer.save_model()  # Saves the tokenizer too for easy upload
+        #trainer.save_model()  # Saves the tokenizer too for easy upload
 
         trainer.log_metrics("train", metrics)
         trainer.save_metrics("train", metrics)
@@ -577,7 +602,10 @@ def main():
             combined = {}
 
         for eval_dataset, task in zip(eval_datasets, tasks):
-            metrics = trainer.evaluate(eval_dataset=eval_dataset)
+            metrics = trainer.evaluate(
+                eval_dataset=eval_dataset,
+                ignore_keys=["last_hidden_state", "pooler_output"],
+            )
 
             max_eval_samples = (
                 data_args.max_eval_samples if data_args.max_eval_samples is not None else len(eval_dataset)
@@ -605,7 +633,11 @@ def main():
         for predict_dataset, task in zip(predict_datasets, tasks):
             # Removing the `label` columns because it contains -1 and Trainer won't like that.
             predict_dataset = predict_dataset.remove_columns("label")
-            predictions = trainer.predict(predict_dataset, metric_key_prefix="predict").predictions
+            predictions = trainer.predict(
+                predict_dataset, 
+                metric_key_prefix="predict",
+                ignore_keys=["last_hidden_state", "pooler_output"],
+            ).predictions
             predictions = np.squeeze(predictions) if is_regression else np.argmax(predictions, axis=1)
 
             output_predict_file = os.path.join(training_args.output_dir, f"predict_results_{task}.txt")
