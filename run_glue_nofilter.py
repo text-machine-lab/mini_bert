@@ -352,7 +352,7 @@ def main():
     # download model & vocab.
 
     config, model = load_model_for_finetuning(
-    run_name=args.run_name,
+    run_name=model_args.run_name,
     config_name = model_args.config_name if model_args.config_name else model_args.model_name_or_path,
     num_labels = num_labels,
     finetuning_task = data_args.task_name,
