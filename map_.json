@@ -1,0 +1,114 @@
+{
+    "genial-voice-1": {
+	"embedding_size": 256,
+	"hidden_size": 256,
+	"intermediate_size": 1024,
+	"num_attention_heads": 8,
+	"num_hidden_layers": 8
+},
+"twilight-wildflower-11": {
+	"embedding_size": 32,
+	"hidden_size": 256,
+	"intermediate_size": 1024,
+	"num_attention_heads": 8,
+	"num_hidden_layers": 8
+},
+"helpful-violet-12": {
+	"embedding_size": 64,
+	"hidden_size": 256,
+	"intermediate_size": 1024,
+	"num_attention_heads": 8,
+	"num_hidden_layers": 8
+},
+"feasible-surf-14": {
+	"embedding_size": 128,
+	"hidden_size": 256,
+	"intermediate_size": 1024,
+	"num_attention_heads": 8,
+	"num_hidden_layers": 8
+},
+"good-voice-21": {
+	"embedding_size": 256,
+	"hidden_size": 32,
+	"intermediate_size": 1024,
+	"num_attention_heads": 8,
+	"num_hidden_layers": 8
+},
+"devout-deluge-19": {
+	"embedding_size": 256,
+	"hidden_size": 64,
+	"intermediate_size": 1024,
+	"num_attention_heads": 8,
+	"num_hidden_layers": 8
+},
+"young-glitter-16": {
+	"embedding_size": 256,
+	"hidden_size": 128,
+	"intermediate_size": 1024,
+	"num_attention_heads": 8,
+	"num_hidden_layers": 8
+},
+"major-smoke-6": {
+	"embedding_size": 256,
+	"hidden_size": 256,
+	"intermediate_size": 128,
+	"num_attention_heads": 8,
+	"num_hidden_layers": 8
+},
+"honest-fog-13": {
+	"embedding_size": 256,
+	"hidden_size": 256,
+	"intermediate_size": 256,
+	"num_attention_heads": 8,
+	"num_hidden_layers": 8
+},
+"prime-pine-15": {
+	"embedding_size": 256,
+	"hidden_size": 256,
+	"intermediate_size": 512,
+	"num_attention_heads": 8,
+	"num_hidden_layers": 8
+},
+"clean-sky-2": {
+	"embedding_size": 256,
+	"hidden_size": 256,
+	"intermediate_size": 1024,
+	"num_attention_heads": 1,
+	"num_hidden_layers": 8
+},
+"polar-sponge-3": {
+	"embedding_size": 256,
+	"hidden_size": 256,
+	"intermediate_size": 1024,
+	"num_attention_heads": 2,
+	"num_hidden_layers": 8
+},
+"absurd-waterfall-5": {
+	"embedding_size": 256,
+	"hidden_size": 256,
+	"intermediate_size": 1024,
+	"num_attention_heads": 4,
+	"num_hidden_layers": 8
+},
+"floral-cloud-17": {
+	"embedding_size": 256,
+	"hidden_size": 256,
+	"intermediate_size": 1024,
+	"num_attention_heads": 8,
+	"num_hidden_layers": 1
+},
+"swift-field-18": {
+	"embedding_size": 256,
+	"hidden_size": 256,
+	"intermediate_size": 1024,
+	"num_attention_heads": 8,
+	"num_hidden_layers": 2
+},
+"apricot-meadow-20": {
+	"embedding_size": 256,
+	"hidden_size": 256,
+	"intermediate_size": 1024,
+	"num_attention_heads": 8,
+	"num_hidden_layers": 4
+}
+}
