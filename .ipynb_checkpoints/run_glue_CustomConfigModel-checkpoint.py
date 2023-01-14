@@ -392,15 +392,44 @@ def main():
     print(f"\nTokenizer, vocab size:")
     print(tokenizer.vocab_size)
     print(f"\n")
-    config, model = load_model_for_finetuning(
-        run_name=model_args.model_name_or_path.split('/')[-1],
-        config_name=model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-        num_labels=num_labels,
-        finetuning_task=data_args.task_name,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None
-    )
+    
+    
+    # create model config and model objects
+    try:
+        print(f"\nLoading default version of the RoBERTa model...")
+        config = AutoConfig.from_pretrained(
+            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+            num_labels=num_labels,
+            finetuning_task=data_args.task_name,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+        model = AutoModelForSequenceClassification.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+            ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
+        )
+        print(f"Loaded default version successfully!")
+        
+    
+    except:
+        print(f"\nCould not load the default version of the RoBERTa model. Trying to load the CustomConfig now...")
+        config, model = load_model_for_finetuning(
+            run_name=model_args.model_name_or_path.split('/')[-1],
+            config_name=model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+            num_labels=num_labels,
+            finetuning_task=data_args.task_name,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None
+        )
+        print(f"Loaded CustomConfig successfully!")
 
 
     # Preprocessing the raw_datasets
