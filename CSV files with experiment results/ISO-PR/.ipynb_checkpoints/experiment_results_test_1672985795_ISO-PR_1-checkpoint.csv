@@ -1,0 +1,3 @@
+,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
+0,-1,64,32,128,1,8,1225216,732226,1957442,13.334430316596622,2.5903494358062744,prime-smoke-1
+1,-1,64,32,256,1,4,1225216,714690,1939906,12.74834341289444,2.5454013347625732,charmed-dew-2

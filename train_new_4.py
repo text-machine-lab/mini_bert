@@ -59,7 +59,7 @@ def parse_args():
     parser.add_argument(
         "--checkpoint_dir",
         type=str,
-        default='./output_dir/earthy-moon-78',
+        default='./output_dir',#/earthy-moon-78',
         help="Where to find previous checkpoint",
     )
     
@@ -80,7 +80,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_path",
         type=str,
-        default="./pretraining_data_free_text_08Jan2022",
+        default="./pretraining_data_01Jan2022",
         help="path to raw dataset",
     )
     parser.add_argument(
@@ -107,7 +107,7 @@ def parse_args():
     parser.add_argument(
         "--tokenizer_path",
         type=str,
-        default="./tokenizer_selection_scripts/Tokenizer_files_free_text/roberta-base_40000",#"./tokenizer_selection_scripts/Tokenizer_files/roberta-base_19000",
+        default="./tokenizer_selection_scripts/Tokenizer_files/roberta-base_19000",#"./tokenizer_selection_scripts/Tokenizer_files_free_text/roberta-base_40000",
         help="path to tokenizer.  If not provided, default BERT tokenizer will be used.",
     )
 
@@ -213,7 +213,7 @@ def parse_args():
     parser.add_argument(
         "--learning_rate",
         type=float,
-        default=0.0005,
+        default=0.0001,
         help="highest learning rate value.",
     )
     parser.add_argument(
@@ -332,7 +332,7 @@ def parse_args():
 
     parser.add_argument(
         "--wandb_project",
-        default="mini_bert_ACL",
+        default="mini_bert_ACL_LR_trial",
         help="wandb project name to log metrics to",
     )
     
@@ -370,7 +370,13 @@ def one_run(
     args.device = device
     
     # start wandb
-    wandb.init(project=args.wandb_project, config=args)
+    wandb.init(
+        project=args.wandb_project, 
+        config=args,
+        tags=[
+            ">15mil. models",
+        ],
+    )
     
     # make sure output dir exists
     args.output_dir = os.path.join(args.output_dir, wandb.run.name)
@@ -428,10 +434,10 @@ def start_experiment():
     #
     features_to_vary = {
         #'embedding_size': [32, 64, 128],
-        #'hidden_size': [32, 64, 128],
-        'num_hidden_layers': [1, 2, 4],
+        'hidden_size': [256, 256+32, 256+64, 256+96, 256+128],
+        #'num_hidden_layers': [1, 2, 4],
         #'num_attention_heads': [1, 2, 4],
-        #'intermediate_size': [128, 256, 512],
+        #'intermediate_size': [1024, 512],
     }
     total_runs = sum([features_to_vary[k_].__len__() for k_ in features_to_vary])
     
@@ -455,7 +461,7 @@ def start_experiment():
     # to save eval results
     eval_results = pd.DataFrame(
         -1,
-        index=range(total_runs * 30000),
+        index=range(total_runs * 36000),
         columns=[
             "eval/perplexity",
             "eval/loss",
@@ -471,9 +477,9 @@ def start_experiment():
     for feature in features_to_vary:        
         #
         for feature_val in features_to_vary[feature]:
-            if (feature == "num_attention_heads") and (feature_val != 4):
-                print(f"Skipping, {feature}, {feature_val}")
-                continue
+            #if (feature == "num_attention_heads") and (feature_val != 4):
+            #    print(f"Skipping, {feature}, {feature_val}")
+            #    continue
             
             #
             run_idx += 1
@@ -487,6 +493,9 @@ def start_experiment():
                 "num_hidden_layers": 8,
             }
             input_config[feature] = feature_val
+            
+            # @TODO: delete when you don't need the following line
+            input_config["intermediate_size"] = int(4 * input_config["hidden_size"])
             
             #
             print(f"\nStarting run with following configuration")
@@ -540,8 +549,149 @@ def start_experiment():
             
     return
 
+def start_experiment_isoflops():
+    
+    #
+    timestamp_ = int(time.time())
+    
+    # every tuple should be = (embedding_size, hidden_size, intermediate_size, num_attention_heads, num_hidden_layers)
+    all_experiments = [
+        # ISO-FLOP
+        #(32, 32, 128, 2, 2),
+        #(32, 32, 256, 2, 1),
+        #(64, 128, 1024, 8, 4),
+        #(128, 128, 128, 1, 1),
+        #(128, 32, 256, 2, 2),
+        #(128, 32, 512, 8, 1),
+        
+        # ISO-PR
+        #(64, 32, 128, 1, 8),
+        #(64, 32, 256, 1, 4),
+        #(256, 128, 128, 4, 4),
+        #(256, 128, 512, 8, 1),
+        
+        #(128, 128, 256, 1, 2),
+        #(64, 64, 512, 8, 2),
+        #(64, 64, 1024, 8, 1),
+        
+        #(32, 64, 256, 4, 8),
+        #(64, 128, 128, 2, 8),
+        #(64, 128, 512, 8, 4),
+        #(128, 256, 1024, 1, 2),
+        
+        # 1 mil, 2 mil, 3 mil, 4 mil par models
+        (32, 32, 512, 8, 8),
+        (64, 32, 1024, 1, 4),
+        (128, 32, 128, 1, 4),
+        (128, 64, 512, 2, 4),        
+    ]
+    total_runs = len(all_experiments)
+    
+    # to save test results
+    test_results = pd.DataFrame(
+        -1,
+        index=range(total_runs),
+        columns=[
+            "run number",
+            "embedding_size",
+            "hidden_size",
+            "intermediate_size",
+            "num_attention_heads",
+            "num_hidden_layers",
+            "Embedding parameters",
+            "Non-embedding parameters",
+            "Total parameters",
+        ],
+    )
+    
+    # to save eval results
+    eval_results = pd.DataFrame(
+        -1,
+        index=range(total_runs * 30000),
+        columns=[
+            "eval/perplexity",
+            "eval/loss",
+            "eval/step",
+            "eval/epoch",
+            "eval/batch_idx",
+            "eval/updates",
+        ],
+    )    
+    
+    #
+    run_idx = -1
+    for exp in all_experiments:        
+        # embedding_size, hidden_sizem intermediate_size, num_attention_heads, num_hidden_layers
+        (e_, h_, i_, a_, l_) = exp
+            
+        #
+        run_idx += 1
+
+        #
+        input_config = {
+            "embedding_size": e_,
+            "hidden_size": h_,
+            "intermediate_size": i_,
+            "num_attention_heads": a_,
+            "num_hidden_layers": l_,
+        }
+
+        #
+        print(f"\nStarting run with following configuration")
+        print(input_config)
+        print('\n')
+        metrics = one_run(**input_config)
+
+        # save input configuration
+        for k_, v_ in input_config.items():
+            test_results.loc[run_idx, k_] = v_
+
+        # save test results
+        for k_, v_ in metrics.items():
+            if not 'eval/' in k_:
+                test_results.loc[run_idx, k_] = v_
+
+        # save eval results
+        for k_, v_ in metrics.items():
+            if 'eval/' in k_:
+                len_ = len(v_)
+                start = run_idx * len_
+                end = start + len_ - 1
+                eval_results.loc[start:end, k_] = v_
+            else:
+                len_ = len(metrics['eval/perplexity'])
+                start = run_idx * len_
+                end = start + len_ - 1
+                eval_results.loc[start:end, k_] = [v_] * len_
+
+        for k_, v_ in input_config.items():
+            eval_results.loc[start:end, k_] = [v_] * len_
+
+
+        # save
+        test_results.to_csv(
+            os.path.join(
+                ".",
+                "CSV files with experiment results",
+                "ModelConfig_free_text",
+                f"experiment_results_test_{timestamp_}_5milorless_.csv"
+            )
+        )
+        eval_results.to_csv(
+            os.path.join(
+                ".",
+                "CSV files with experiment results",
+                "ModelConfig_free_text",
+                f"experiment_results_eval_{timestamp_}_5milorless_.csv"
+            )
+        )
+    
+    
+    return
+
 
 if __name__ == "__main__":
     start_experiment()
+    #start_experiment_isoflops()
 
 # python3 train.py --beta2=0.95 --learning_rate=0.00005 --max_train_steps=1 --restart --output_dir=output_dir/dazzling-haze-202 --tokenizer_path=Sentence_13k --batch_size=10 --glue_learning_rate=0.01 --glue_epochs=100 --restart_for_fine_tuning

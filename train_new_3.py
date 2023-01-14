@@ -59,7 +59,7 @@ def parse_args():
     parser.add_argument(
         "--checkpoint_dir",
         type=str,
-        default='./output_dir/earthy-moon-78',
+        default='./output_dir',#/earthy-moon-78',
         help="Where to find previous checkpoint",
     )
     
@@ -80,7 +80,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_path",
         type=str,
-        default="./pretraining_data_free_text_08Jan2022",
+        default="./pretraining_data_01Jan2022",
         help="path to raw dataset",
     )
     parser.add_argument(
@@ -107,7 +107,7 @@ def parse_args():
     parser.add_argument(
         "--tokenizer_path",
         type=str,
-        default="./tokenizer_selection_scripts/Tokenizer_files_free_text/roberta-base_40000",#"./tokenizer_selection_scripts/Tokenizer_files/roberta-base_19000",
+        default="./tokenizer_selection_scripts/Tokenizer_files/roberta-base_19000",#"./tokenizer_selection_scripts/Tokenizer_files_free_text/roberta-base_40000",
         help="path to tokenizer.  If not provided, default BERT tokenizer will be used.",
     )
 
@@ -195,13 +195,13 @@ def parse_args():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=32,
+        default=128,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
         "--eval_batch_size",
         type=int,
-        default=32,
+        default=128,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
@@ -265,14 +265,14 @@ def parse_args():
     parser.add_argument(
         "--grad_acc_steps",
         type=int,
-        default=8,
+        default=2,
         help="Accumulate gradient for these many steps",
     )
     
     parser.add_argument(
         "--eval_every_steps",
         type=int,
-        default=8000,
+        default=2000,
         help="Perform evaluation every n network updates.",
     )
     
@@ -332,7 +332,7 @@ def parse_args():
 
     parser.add_argument(
         "--wandb_project",
-        default="mini_bert_ACL_ModelConfig_free_text",
+        default="mini_bert_ACL",
         help="wandb project name to log metrics to",
     )
     
@@ -370,7 +370,13 @@ def one_run(
     args.device = device
     
     # start wandb
-    wandb.init(project=args.wandb_project, config=args)
+    wandb.init(
+        project=args.wandb_project, 
+        config=args,
+        tags=[
+            "<5mil. models",
+        ],
+    )
     
     # make sure output dir exists
     args.output_dir = os.path.join(args.output_dir, wandb.run.name)
@@ -428,10 +434,10 @@ def start_experiment():
     #
     features_to_vary = {
         #'embedding_size': [32, 64, 128],
-        #'hidden_size': [128, 64, 32],
-        'num_hidden_layers': [4, 2, 1],
+        #'hidden_size': [512, 256, 128, 64],
+        #'num_hidden_layers': [1, 2, 4],
         #'num_attention_heads': [1, 2, 4],
-        #'intermediate_size': [128, 256, 512],
+        'intermediate_size': [1024, 512],
     }
     total_runs = sum([features_to_vary[k_].__len__() for k_ in features_to_vary])
     
@@ -455,7 +461,7 @@ def start_experiment():
     # to save eval results
     eval_results = pd.DataFrame(
         -1,
-        index=range(total_runs * 30000),
+        index=range(total_runs * 36000),
         columns=[
             "eval/perplexity",
             "eval/loss",
@@ -471,20 +477,20 @@ def start_experiment():
     for feature in features_to_vary:        
         #
         for feature_val in features_to_vary[feature]:
-            if (feature == "num_attention_heads") and (feature_val != 4):
-                print(f"Skipping, {feature}, {feature_val}")
-                continue
+            #if (feature == "num_attention_heads") and (feature_val != 4):
+            #    print(f"Skipping, {feature}, {feature_val}")
+            #    continue
             
             #
             run_idx += 1
             
             #
             input_config = {
-                "embedding_size": 256,
-                "hidden_size": 256,
-                "intermediate_size": 1024,
-                "num_attention_heads": 8,
-                "num_hidden_layers": 8,
+                "embedding_size": 32,
+                "hidden_size": 32,
+                "intermediate_size": 128,
+                "num_attention_heads": 1,
+                "num_hidden_layers": 1,
             }
             input_config[feature] = feature_val
             
@@ -558,10 +564,10 @@ def start_experiment_isoflops():
         # ISO-PR
         #(64, 32, 128, 1, 8),
         #(64, 32, 256, 1, 4),
-        (256, 128, 128, 4, 4),
-        (256, 128, 512, 8, 1),
+        #(256, 128, 128, 4, 4),
+        #(256, 128, 512, 8, 1),
         
-        (128, 128, 256, 1, 2),
+        #(128, 128, 256, 1, 2),
         #(64, 64, 512, 8, 2),
         #(64, 64, 1024, 8, 1),
         
@@ -570,7 +576,11 @@ def start_experiment_isoflops():
         #(64, 128, 512, 8, 4),
         #(128, 256, 1024, 1, 2),
         
-        
+        # 1 mil, 2 mil, 3 mil, 4 mil par models
+        (32, 32, 512, 8, 8),
+        (64, 32, 1024, 1, 4),
+        (128, 32, 128, 1, 4),
+        (128, 64, 512, 2, 4),        
     ]
     total_runs = len(all_experiments)
     
@@ -656,15 +666,29 @@ def start_experiment_isoflops():
 
 
         # save
-        test_results.to_csv(f"experiment_results_test_{timestamp_}_ISO-PR_3.csv")
-        eval_results.to_csv(f"experiment_results_eval_{timestamp_}_ISO-PR_3.csv")
+        test_results.to_csv(
+            os.path.join(
+                ".",
+                "CSV files with experiment results",
+                "ModelConfig_free_text",
+                f"experiment_results_test_{timestamp_}_5milorless_.csv"
+            )
+        )
+        eval_results.to_csv(
+            os.path.join(
+                ".",
+                "CSV files with experiment results",
+                "ModelConfig_free_text",
+                f"experiment_results_eval_{timestamp_}_5milorless_.csv"
+            )
+        )
     
     
     return
 
 
 if __name__ == "__main__":
-    start_experiment()
-    #start_experiment_isoflops()
+    #start_experiment()
+    start_experiment_isoflops()
 
 # python3 train.py --beta2=0.95 --learning_rate=0.00005 --max_train_steps=1 --restart --output_dir=output_dir/dazzling-haze-202 --tokenizer_path=Sentence_13k --batch_size=10 --glue_learning_rate=0.01 --glue_epochs=100 --restart_for_fine_tuning

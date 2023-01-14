@@ -59,7 +59,7 @@ def parse_args():
     parser.add_argument(
         "--checkpoint_dir",
         type=str,
-        default='./output_dir/earthy-moon-78',
+        default='./output_dir',#/earthy-moon-78',
         help="Where to find previous checkpoint",
     )
     
@@ -80,7 +80,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_path",
         type=str,
-        default="./pretraining_data_free_text_08Jan2022",
+        default="./pretraining_data_01Jan2022",
         help="path to raw dataset",
     )
     parser.add_argument(
@@ -107,7 +107,7 @@ def parse_args():
     parser.add_argument(
         "--tokenizer_path",
         type=str,
-        default="./tokenizer_selection_scripts/Tokenizer_files_free_text/roberta-base_40000",
+        default="./tokenizer_selection_scripts/Tokenizer_files/roberta-base_19000",#"./tokenizer_selection_scripts/Tokenizer_files_free_text/roberta-base_40000",
         help="path to tokenizer.  If not provided, default BERT tokenizer will be used.",
     )
 
@@ -332,7 +332,7 @@ def parse_args():
 
     parser.add_argument(
         "--wandb_project",
-        default="mini_bert_ACL_ModelConfig_free_text",
+        default="mini_bert_ACL",
         help="wandb project name to log metrics to",
     )
     
@@ -370,7 +370,13 @@ def one_run(
     args.device = device
     
     # start wandb
-    wandb.init(project=args.wandb_project, config=args)
+    wandb.init(
+        project=args.wandb_project, 
+        config=args,
+        tags=[
+            "<5mil. models",
+        ],
+    )
     
     # make sure output dir exists
     args.output_dir = os.path.join(args.output_dir, wandb.run.name)
@@ -428,10 +434,10 @@ def start_experiment():
     #
     features_to_vary = {
         #'embedding_size': [32, 64, 128],
-        'hidden_size': [32, 64, 128],
+        'hidden_size': [256, 128, 64],
         #'num_hidden_layers': [1, 2, 4],
         #'num_attention_heads': [1, 2, 4],
-        #'intermediate_size': [128, 256, 512],
+        #'intermediate_size': [64, 256, 512],
     }
     total_runs = sum([features_to_vary[k_].__len__() for k_ in features_to_vary])
     
@@ -480,11 +486,11 @@ def start_experiment():
             
             #
             input_config = {
-                "embedding_size": 256,
-                "hidden_size": 256,
-                "intermediate_size": 1024,
-                "num_attention_heads": 8,
-                "num_hidden_layers": 8,
+                "embedding_size": 32,
+                "hidden_size": 32,
+                "intermediate_size": 128,
+                "num_attention_heads": 1,
+                "num_hidden_layers": 1,
             }
             input_config[feature] = feature_val
             

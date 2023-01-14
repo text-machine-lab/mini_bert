@@ -1,0 +1,4 @@
+,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
+0,-1,128,128,128,1,1,2450432,2585410,5035842,9.473689849508244,2.248518466949463,proud-bee-2
+1,-1,128,32,256,2,2,2450432,674690,3125122,13.108245664674104,2.5732414722442627,sweet-dragon-4
+2,-1,128,32,512,8,1,2450432,670306,3120738,20.999305876927668,3.0444893836975098,chocolate-plasma-7

@@ -1,0 +1,4 @@
+,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
+0,-1,32,256,1024,8,8,612608,11278914,11891522,5.600978970485169,1.7229413986206055,twilight-wildflower-11
+1,-1,64,256,1024,8,8,1225216,11287106,12512322,5.307727741922099,1.6691638231277466,helpful-violet-12
+2,-1,128,256,1024,8,8,2450432,11303490,13753922,5.111029356681872,1.6314008235931396,feasible-surf-14

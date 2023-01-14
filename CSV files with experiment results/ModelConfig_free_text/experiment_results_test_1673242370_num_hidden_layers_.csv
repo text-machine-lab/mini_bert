@@ -1,0 +1,4 @@
+,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
+0,-1,256,256,1024,8,4,10276864,13574218,23851082,8.694220138527776,2.162658452987671,absurd-butterfly-4
+1,-1,256,256,1024,8,2,10276864,11994698,22271562,10.773770625271442,2.3771145343780518,vocal-durian-6
+2,-1,256,256,1024,8,1,10276864,11204938,21481802,13.92534917922133,2.6337108612060547,morning-cherry-8

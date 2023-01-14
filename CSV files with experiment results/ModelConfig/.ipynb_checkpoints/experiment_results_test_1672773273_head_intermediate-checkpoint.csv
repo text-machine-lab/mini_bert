@@ -1,0 +1,7 @@
+,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
+0,-1,256,256,1024,4,8,4900864,6403394,11304258,4.746279304258498,1.5573610067367554,absurd-waterfall-5
+1,-1,256,256,128,8,8,4900864,2726210,7627074,5.6100247695435055,1.7245551347732544,major-smoke-6
+2,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,
+3,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,
+4,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,
+5,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,

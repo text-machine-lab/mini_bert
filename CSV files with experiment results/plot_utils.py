@@ -7,11 +7,55 @@ from tqdm import tqdm
 import matplotlib.patches as mpatches
 
 
+def get_flops_hoffman(
+    embedding_size,
+    hidden_size,
+    intermediate_size,
+    num_attention_heads,
+    num_hidden_layers,
+    #num_training_seq=9081600,
+    vocab_size=19010,
+    seq_len=128,
+):
+    #
+    key_size = hidden_size / num_attention_heads
+    
+    # Embeddings
+    flops_emb = 2 * seq_len * vocab_size * embedding_size
+    flops_emb += (2 * seq_len * embedding_size * hidden_size)
+    
+    # 1 attention block (QKV projection + K@Q logits + Softmax + Softmax query reduction + final linear)
+    flops_attention = (2 * 3 * seq_len * hidden_size * (key_size * num_attention_heads))
+    flops_attention += (2 * seq_len * seq_len * (key_size * num_attention_heads))
+    flops_attention += (3 * num_attention_heads * seq_len * seq_len)
+    
+    # 1 intermediate layer
+    flops_intermediate = (2 * seq_len * (hidden_size * intermediate_size + hidden_size * intermediate_size))
+    
+    # LM head
+    flops_logits = (2 * seq_len * hidden_size * vocab_size)
+    
+    # Total flops for forward pass
+    flops_forward = flops_emb + (num_hidden_layers * (flops_attention + flops_intermediate)) + flops_logits
+    
+    # As per the assumption in Kaplan and Hoffman
+    flops_backward = 2 * flops_forward
+    
+    return (flops_forward + flops_backward)
+
+def get_flops_kaplan(
+    num_non_emb_pars,
+    seq_len=128,
+    #num_training_seq=9081600,
+):
+    return (6 * num_non_emb_pars * (seq_len))
+
+
 def get_color_for_par(
     total_par,
-    perc_25=8940354,
-    perc_50=11304258,
-    perc_75=11596802,
+    perc_25=3125122,
+    perc_50=7601346,
+    perc_75=11304258,
     perc_100=13753922,
 ):
     if total_par <= perc_25:
@@ -43,17 +87,19 @@ def get_color_config(
 def plot_ppl_flops_model_size(
     df_eval,
 ):
+    plt.rcParams.update({'font.size': 22})
+    sns.set_style("darkgrid")
     f, ax = plt.subplots(figsize=(12, 8), dpi=128)
-    ax.set(xscale="log")#, yscale="log")
+    ax.set(xscale="log", yscale="log")
 
     #
     for run_name in df_eval.run_name.unique():
         df_i = df_eval.loc[df_eval.loc[:, 'run_name'] == run_name, :]
-        #sns.set_style("darkgrid")
         sns.lineplot(
             data=df_i,
             x="FLOPS Hoffman total",
             y="eval/perplexity",
+            #hue="Total parameters",
             lw=4,
             alpha=0.7,
             ax=ax, 
@@ -65,7 +111,7 @@ def plot_ppl_flops_model_size(
     #
     handles = []
     prev_size_ = 0
-    for val_idx, val in enumerate([8940354, 11304258, 11596802, 13753922]):
+    for val_idx, val in enumerate(np.percentile(df_eval.loc[:, 'Total parameters'].values, [25, 50, 75, 100])):
 
         # col
         col_ = get_color_for_par(val)
@@ -78,13 +124,12 @@ def plot_ppl_flops_model_size(
 
         #
         handles.append(mpatches.Patch(color=col_, label=label_))
-
+    
     #
     ax.legend(handles=handles)
     plt.xlabel("FLOPs (based on Hoffman et.al.)")
     plt.ylabel("Perplexity on development set")
-    plt.rcParams.update({'font.size': 22})
-    plt.savefig("./PLOTS/PPL_vs_FLOPs.jpg")
+    plt.savefig("./PLOTS/PPL_vs_FLOPs_log.jpg")
     
     return
 
@@ -94,13 +139,14 @@ def plot_ppl_flops_model_config_feature(
     config_feature="embedding_size",
     config_feature_vals=[32, 64, 128, 256],
 ):
+    sns.set_style("darkgrid")
+    plt.rcParams.update({'font.size': 22})
     f, ax = plt.subplots(figsize=(12, 8), dpi=128)
-    ax.set(xscale="log")#, yscale="log")
+    ax.set(xscale="log", yscale="log")
 
 
     for run_name in df_eval.run_name.unique():
         df_i = df_eval.loc[df_eval.loc[:, 'run_name'] == run_name, :]
-        #sns.set_style("darkgrid")
         sns.lineplot(
             data=df_i,
             x="FLOPS Hoffman total",
@@ -156,7 +202,6 @@ def plot_ppl_flops_model_config_feature(
     ax.legend(handles=handles)
     plt.xlabel("FLOPs (based on Hoffman et.al.)")
     plt.ylabel("Perplexity on development set")
-    plt.rcParams.update({'font.size': 22})
-    plt.savefig(f"./PLOTS/PPL_vs_FLOPs_by_{config_feature}.jpg")
+    plt.savefig(f"./PLOTS/PPL_vs_FLOPs_by_{config_feature}_log.jpg")
     
     return

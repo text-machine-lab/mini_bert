@@ -1,0 +1,4 @@
+,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
+0,-1,32,32,64,1,1,612608,638114,1250722,22.434051649313577,3.1105799674987793,magic-bee-26
+1,-1,32,32,128,1,1,612608,642274,1254882,21.48325118280673,3.0672736167907715,electric-sponge-29
+2,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,

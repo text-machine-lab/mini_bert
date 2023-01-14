@@ -1,0 +1,4 @@
+,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
+0,-1,256,256,1024,8,1,4900864,5807938,10708802,7.597414187973423,2.0278079509735107,floral-cloud-17
+1,-1,256,256,1024,8,2,4900864,6597698,11498562,6.073711452089643,1.8039698600769043,swift-field-18
+2,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,

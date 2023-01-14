@@ -1,0 +1,8 @@
+,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
+0,-1,256,256,1024,8,8,4900864,6403394,11304258,4.799142320246356,1.5684372186660767,genial-voice-1
+1,-1,256,256,1024,1,8,4900864,6403394,11304258,4.7360295938837895,1.555199146270752,clean-sky-2
+2,-1,256,256,1024,2,8,4900864,6403394,11304258,4.673005339338952,1.5418024063110352,polar-sponge-3
+3,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,
+4,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,
+5,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,
+6,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,

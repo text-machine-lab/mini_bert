@@ -1,0 +1,2 @@
+,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
+0,-1,256,32,1024,8,8,4900864,1204290,6105154,10.419657955852195,2.3436942100524902,good-voice-21

@@ -1,0 +1,4 @@
+,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
+0,-1,256,128,1024,8,8,4900864,5141058,10041922,5.8806391436959915,1.7716654539108276,young-glitter-16
+1,-1,256,64,1024,8,8,4900864,2448962,7349826,7.557650474164684,2.0225603580474854,devout-deluge-19
+2,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,
