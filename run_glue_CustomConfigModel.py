@@ -86,6 +86,10 @@ class DataTrainingArguments:
     dataset_name: Optional[str] = field(
         default=None, metadata={"help": "The name of the dataset to use (via the datasets library)."}
     )
+    filter_glue: Optional[str] = field(
+        default="True",
+        metadata={"help": "To filter the dataset according to vocab or not"},
+    )
     dataset_config_name: Optional[str] = field(
         default=None, metadata={"help": "The configuration name of the dataset to use (via the datasets library)."}
     )
@@ -272,12 +276,22 @@ def main():
     # In distributed training, the load_dataset function guarantee that only one local process can concurrently
     # download the dataset.
     if data_args.task_name is not None:
-        # Downloading and loading a dataset from the hub.
-        raw_datasets = utils.filter_glue_dataset(
-            task_name=data_args.task_name,
+        if data_args.filter_glue:
+            print(f"Loading ***FILTERED*** version of the GLUE task specific dataset")
+            raw_datasets = utils.filter_glue_dataset(
+                task_name=data_args.task_name,
+                cache_dir=model_args.cache_dir,
+                use_auth_token=True if model_args.use_auth_token else None,
+            )
+        else:
+            print(f"Loading ***UN-FILTERED*** version of the GLUE task specific dataset")
+            raw_datasets = load_dataset(
+            "glue",
+            data_args.task_name,
             cache_dir=model_args.cache_dir,
             use_auth_token=True if model_args.use_auth_token else None,
         )
+        
     elif data_args.dataset_name is not None:
         # Downloading and loading a dataset from the hub.
         raw_datasets = load_dataset(
