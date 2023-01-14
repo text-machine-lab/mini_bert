@@ -140,7 +140,11 @@ class LanModelSequenceClassification(PreTrainedModel):
         outputs = self.model(input_ids)
         outputs["pooler_output"] = self.pooler(outputs["last_hidden_state"].permute(0, 2, 1)).flatten(start_dim=1)
         outputs["logits"] = self.head_sequence_classification(outputs["pooler_output"])
-        outputs["loss"] = self.criterion(outputs["logits"], labels)
+        
+        try:
+            outputs["loss"] = self.criterion(outputs["logits"], labels)
+        else:
+            outputs["loss"] = -1
         
         #
         """
