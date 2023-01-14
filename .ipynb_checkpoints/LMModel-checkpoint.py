@@ -141,10 +141,13 @@ class LanModelSequenceClassification(PreTrainedModel):
         outputs["pooler_output"] = self.pooler(outputs["last_hidden_state"].permute(0, 2, 1)).flatten(start_dim=1)
         outputs["logits"] = self.head_sequence_classification(outputs["pooler_output"])
         
+        #
         try:
             outputs["loss"] = self.criterion(outputs["logits"], labels)
-        else:
-            outputs["loss"] = -1
+        except:
+            # for STSB fine-tuning
+            act_ = nn.functional.relu(outputs["logits"].flatten(start_dim=0))            
+            outputs["loss"] = nn.functional.mse_loss(act_, labels)
         
         #
         """

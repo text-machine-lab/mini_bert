@@ -86,8 +86,8 @@ class DataTrainingArguments:
     dataset_name: Optional[str] = field(
         default=None, metadata={"help": "The name of the dataset to use (via the datasets library)."}
     )
-    filter_glue: Optional[str] = field(
-        default="True",
+    filter_glue: Optional[int] = field(
+        default=1,
         metadata={"help": "To filter the dataset according to vocab or not"},
     )
     dataset_config_name: Optional[str] = field(
@@ -276,7 +276,7 @@ def main():
     # In distributed training, the load_dataset function guarantee that only one local process can concurrently
     # download the dataset.
     if data_args.task_name is not None:
-        if data_args.filter_glue:
+        if bool(data_args.filter_glue):
             print(f"Loading ***FILTERED*** version of the GLUE task specific dataset")
             raw_datasets = utils.filter_glue_dataset(
                 task_name=data_args.task_name,
