@@ -23,7 +23,7 @@ do
                                         d="checkpoint_at_8000"
                                 elif [[ "$j" == "laced-sun-4" ]]
                                 then
-                                        d="checkpoint_at_32000"
+                                        d="checkpoint_at_16000"
                                 fi
                                 echo "$i $j $k $h"
                                 python3 run_glue_CustomConfigModel.py --model_name=output_dir/$j/other_checkpoints/$d --filter_glue=$h --tokenizer=./tokenizer_selection_scripts/Tokenizer_files/roberta-base_19000 --task_name="$i" --do_train --do_eval --max_seq_length=128 --per_gpu_train_batch_size=32 --learning_rate=2e-4 --weight_decay=0 --num_train_epochs=5 --output_dir="output_dir/$i-$j-vE-s$k-f$h" --report_to=wandb --overwrite_output_dir --eval_steps=100 --seed=$k
