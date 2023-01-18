@@ -430,12 +430,16 @@ def main():
             ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
         )
         print(f"Loaded default version successfully!")
-        
-    
+
+
     except:
         print(f"\nCould not load the default version of the RoBERTa model. Trying to load the CustomConfig now...")
+        if model_args.model_name_or_path.split('/')[-1] != 'best_model':
+            rn = model_args.model_name_or_path.split('/')[-3]
+        else:
+            rn = model_args.model_name_or_path.split('/')[-2]
         config, model = load_model_for_finetuning(
-            run_name=model_args.model_name_or_path.split('/')[-2],
+            run_name=rn,
             config_name=model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task=data_args.task_name,
