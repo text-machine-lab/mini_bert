@@ -1,3 +1,5 @@
+#!/bin/bash
+
 declare -a dataset=("stsb")
 
 declare -a models=("good-voice-21" "devout-deluge-19" "young-glitter-16" "major-smoke-6")
