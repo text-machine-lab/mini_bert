@@ -1,0 +1,170 @@
+{
+"clean-sky-2":
+{
+    "embedding_size": 256,
+    "hidden_size": 256,
+    "intermediate_size": 1024,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 8
+},
+"fresh-wildflower-10":
+{
+    "embedding_size": 128,
+    "hidden_size": 128,
+    "intermediate_size": 256,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 2
+},
+"misty-lake-11":
+{
+    "embedding_size": 32,
+    "hidden_size": 64,
+    "intermediate_size": 256,
+    "num_attention_heads": 4,
+    "num_hidden_layers": 8
+},
+"wise-dew-6":
+{
+    "embedding_size": 64,
+    "hidden_size": 128,
+    "intermediate_size": 1024,
+    "num_attention_heads": 8,
+    "num_hidden_layers": 4
+},
+"laced-sun-4":
+{
+    "embedding_size": 64,
+    "hidden_size": 64,
+    "intermediate_size": 512,
+    "num_attention_heads": 8,
+    "num_hidden_layers": 2
+},
+"likely-cloud-28":
+{
+    "embedding_size": 32,
+    "hidden_size": 32,
+    "intermediate_size": 512,
+    "num_attention_heads": 8,
+    "num_hidden_layers": 8
+},
+"devoted-capybara-3":
+{
+    "embedding_size": 32,
+    "hidden_size": 32,
+    "intermediate_size": 128,
+    "num_attention_heads": 2,
+    "num_hidden_layers": 2
+},
+"feasible-butterfly-9":
+{
+    "embedding_size": 64,
+    "hidden_size": 128,
+    "intermediate_size": 512,
+    "num_attention_heads": 8,
+    "num_hidden_layers": 4
+},
+"stellar-galaxy-5":
+{
+    "embedding_size": 32,
+    "hidden_size": 32,
+    "intermediate_size": 256,
+    "num_attention_heads": 2,
+    "num_hidden_layers": 1
+},
+"giddy-water-31":
+{
+    "embedding_size": 64,
+    "hidden_size": 32,
+    "intermediate_size": 1024,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 4
+},
+"magic-bee-26":
+{
+    "embedding_size": 32,
+    "hidden_size": 32,
+    "intermediate_size": 64,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 1
+},
+"electric-sponge-29":
+{
+    "embedding_size": 32,
+    "hidden_size": 32,
+    "intermediate_size": 128,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 1
+},
+"chocolate-plasma-7":
+{
+    "embedding_size": 128,
+    "hidden_size": 32,
+    "intermediate_size": 512,
+    "num_attention_heads": 8,
+    "num_hidden_layers": 1
+},
+"earthy-vortex-3":
+{
+    "embedding_size": 64,
+    "hidden_size": 128,
+    "intermediate_size": 128,
+    "num_attention_heads": 2,
+    "num_hidden_layers": 8
+},
+"charmed-dew-2":
+{
+    "embedding_size": 64,
+    "hidden_size": 32,
+    "intermediate_size": 256,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 4
+},
+"lyric-plant-12":
+{
+    "embedding_size": 128,
+    "hidden_size": 256,
+    "intermediate_size": 1024,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 2
+},
+"young-glitter-16":
+{
+    "embedding_size": 256,
+    "hidden_size": 128,
+    "intermediate_size": 1024,
+    "num_attention_heads": 8,
+    "num_hidden_layers": 8
+},
+"silvery-pyramid-8":
+{
+    "embedding_size": 64,
+    "hidden_size": 64,
+    "intermediate_size": 1024,
+    "num_attention_heads": 8,
+    "num_hidden_layers": 1
+},
+"silver-smoke-30":
+{
+    "embedding_size": 32,
+    "hidden_size": 128,
+    "intermediate_size": 128,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 1
+},
+"grateful-yogurt-5":
+{
+    "embedding_size": 256,
+    "hidden_size": 288,
+    "intermediate_size": 1152,
+    "num_attention_heads": 8,
+    "num_hidden_layers": 8
+},
+"apricot-meadow-20":
+{
+    "embedding_size": 256,
+    "hidden_size": 256,
+    "intermediate_size": 1024,
+    "num_attention_heads": 8,
+    "num_hidden_layers": 4
+}
+}
