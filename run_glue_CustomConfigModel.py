@@ -410,6 +410,7 @@ def main():
     
     # create model config and model objects
     try:
+        ignore_keys_for_eval = []
         print(f"\nLoading default version of the RoBERTa model...")
         config = AutoConfig.from_pretrained(
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
@@ -417,7 +418,7 @@ def main():
             finetuning_task=data_args.task_name,
             cache_dir=model_args.cache_dir,
             revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
+            use_auth_token=True if model_args.use_auth_token else None
         )
 
         model = AutoModelForSequenceClassification.from_pretrained(
@@ -433,6 +434,7 @@ def main():
         
     
     except:
+        ignore_keys_for_eval = ["last_hidden_state", "pooler_output"]
         print(f"\nCould not load the default version of the RoBERTa model. Trying to load the CustomConfig now...")
         # if model_args.model_name_or_path.split('/')[-1] != 'best_model':
         #     rn = model_args.model_name_or_path.split('/')[-3]
@@ -618,7 +620,7 @@ def main():
             checkpoint = last_checkpoint
         train_result = trainer.train(
             resume_from_checkpoint=checkpoint, 
-            ignore_keys_for_eval=["last_hidden_state", "pooler_output"]
+            ignore_keys_for_eval=ignore_keys_for_eval
         )
         metrics = train_result.metrics
         max_train_samples = (
@@ -651,7 +653,7 @@ def main():
         for eval_dataset, task in zip(eval_datasets, tasks):
             metrics = trainer.evaluate(
                 eval_dataset=eval_dataset,
-                ignore_keys=["last_hidden_state", "pooler_output"],
+                ignore_keys=ignore_keys_for_eval,
             )
 
             max_eval_samples = (
@@ -683,7 +685,7 @@ def main():
             predictions = trainer.predict(
                 predict_dataset, 
                 metric_key_prefix="predict",
-                ignore_keys=["last_hidden_state", "pooler_output"],
+                ignore_keys=ignore_keys_for_eval,
             ).predictions
             predictions = np.squeeze(predictions) if is_regression else np.argmax(predictions, axis=1)
 
