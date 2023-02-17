@@ -278,7 +278,7 @@ def main():
     if data_args.task_name is not None:
         if bool(data_args.filter_glue):
             print(f"Loading ***FILTERED*** version of the GLUE task specific dataset")
-            raw_datasets = utils.filter_glue_dataset(
+            raw_datasets = utils.filter_dataset(core_dataset="superglue",
                 task_name=data_args.task_name,
                 cache_dir=model_args.cache_dir,
                 use_auth_token=True if model_args.use_auth_token else None,
@@ -286,7 +286,7 @@ def main():
         else:
             print(f"Loading ***UN-FILTERED*** version of the GLUE task specific dataset")
             raw_datasets = load_dataset(
-            "glue",
+            "superglue",
             data_args.task_name,
             cache_dir=model_args.cache_dir,
             use_auth_token=True if model_args.use_auth_token else None,
