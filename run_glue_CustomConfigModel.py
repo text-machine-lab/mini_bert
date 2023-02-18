@@ -54,16 +54,30 @@ require_version("datasets>=1.8.0", "To fix: pip install -r examples/pytorch/text
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
-task_to_keys = {
-    "cola": ("sentence", None),
-    "mnli": ("premise", "hypothesis"),
-    "mrpc": ("sentence1", "sentence2"),
-    "qnli": ("question", "sentence"),
-    "qqp": ("question1", "question2"),
-    "rte": ("sentence1", "sentence2"),
-    "sst2": ("sentence", None),
-    "stsb": ("sentence1", "sentence2"),
-    "wnli": ("sentence1", "sentence2"),
+g_task_to_keys = {
+    "cola": ("sentence", None, None),
+    "mnli": ("premise", "hypothesis", None),
+    "mrpc": ("sentence1", "sentence2", None),
+    "qnli": ("question", "sentence", None),
+    "qqp": ("question1", "question2", None),
+    "rte": ("sentence1", "sentence2", None),
+    "sst2": ("sentence", None, None),
+    "stsb": ("sentence1", "sentence2", None),
+    "wnli": ("sentence1", "sentence2", None),
+}
+
+sg_task_to_keys = {
+    "boolq": ("question", "passage", None),
+    "cb": ("premise", "hypothesis", None),
+    "copa": ("premise", "choice1", "choice2"),
+    "multirc": ("paragraph", "question", None),
+    "record": ("passage", "query", None),
+    "rte": ("premise", "hypothesis", None),
+    "wic": ("sentence1", "sentence2", None),
+    "wsc": ("text", None, None),
+    "wsc.fixed": ("text", None, None),
+    "axb": ("sentence1", "sentence2", None),
+    "axg": ("premise", "hypothesis", None)
 }
 
 logger = logging.getLogger(__name__)
@@ -81,7 +95,7 @@ class DataTrainingArguments:
 
     task_name: Optional[str] = field(
         default=None,
-        metadata={"help": "The name of the task to train on: " + ", ".join(task_to_keys.keys())},
+        metadata={"help": "The name of the task to train on: " + ", ".join(sg_task_to_keys.keys())},
     )
     dataset_name: Optional[str] = field(
         default=None, metadata={"help": "The name of the dataset to use (via the datasets library)."}
@@ -152,8 +166,8 @@ class DataTrainingArguments:
     def __post_init__(self):
         if self.task_name is not None:
             self.task_name = self.task_name.lower()
-            if self.task_name not in task_to_keys.keys():
-                raise ValueError("Unknown task, you should pick one in " + ",".join(task_to_keys.keys()))
+            if self.task_name not in g_task_to_keys.keys() and self.task_name not in sg_task_to_keys.keys():
+                raise ValueError("Unknown task, you should pick one in " + ",".join(sg_task_to_keys.keys()))
         elif self.dataset_name is not None:
             pass
         elif self.train_file is None or self.validation_file is None:
@@ -454,17 +468,23 @@ def main():
 
     # Preprocessing the raw_datasets
     if data_args.task_name is not None:
-        sentence1_key, sentence2_key = task_to_keys[data_args.task_name]
+        sentence1_key, sentence2_key, sentence3_key = sg_task_to_keys[data_args.task_name]
     else:
         # Again, we try to have some nice defaults but don't hesitate to tweak to your use case.
         non_label_column_names = [name for name in raw_datasets["train"].column_names if name != "label"]
         if "sentence1" in non_label_column_names and "sentence2" in non_label_column_names:
             sentence1_key, sentence2_key = "sentence1", "sentence2"
         else:
-            if len(non_label_column_names) >= 2:
-                sentence1_key, sentence2_key = non_label_column_names[:2]
+            #TODO: this needs to be fixed to reflect all the superglue options (3 feats, not 1st 2 indices...)
+            if len(non_label_column_names) > 2:
+                sentence1_key, sentence2_key, sentence3_key = non_label_column_names[:3]
+            elif len(non_label_column_names) == 2:
+                if data_args.task_name == "wic":
+                    sentence1_key, sentence2_key, sentence3_key = non_label_column_names[1:3], None
+                else:
+                    sentence1_key, sentence2_key, sentence3_key = non_label_column_names[:2], None
             else:
-                sentence1_key, sentence2_key = non_label_column_names[0], None
+                sentence1_key, sentence2_key, sentence3_key = non_label_column_names[0], None, None
 
     # Padding strategy
     if data_args.pad_to_max_length:
@@ -510,7 +530,9 @@ def main():
     def preprocess_function(examples):
         # Tokenize the texts
         args = (
-            (examples[sentence1_key],) if sentence2_key is None else (examples[sentence1_key], examples[sentence2_key])
+            (examples[sentence1_key],) if (sentence2_key is None and sentence3_key is None) else
+            (examples[sentence1_key], examples[sentence2_key]) if (sentence3_key is None and sentence2_key)
+            else (examples[sentence1_key], examples[sentence2_key], examples[sentence3_key])
         )
         result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
         
