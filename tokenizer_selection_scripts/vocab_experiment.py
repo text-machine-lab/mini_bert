@@ -191,7 +191,7 @@ def run_vocabulary_experiment():
         data = json.load(f)
     """
     print(f"\nReading data...")
-    path_data = './../pretraining_data_free_text_08Jan2022'
+    path_data = '../../../../../home/vdeshpande/mini_lm/git_repo/mini_bert/babylm_10M_trial_07Feb2023'
     print(f"Reading data from {path_data}")
     data = load_from_disk(path_data)
     print("DONE!")
