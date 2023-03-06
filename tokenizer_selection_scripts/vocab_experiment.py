@@ -201,18 +201,19 @@ def run_vocabulary_experiment():
     
     #
     tokenizer_names = [
-        #'BPE',
-        #'WordPiece',
-        #'SentencePiece',
+        # 'BPE',
+        # 'WordPiece',
+        'SentencePiece',
+        # 'ByteLevelBPE',
         #'bert-base-uncased',
         #'phueb/BabyBERTa-1', 
         #'prajjwal1/bert-tiny', 
         #'distilbert-base-uncased', 
-        'roberta-base',
+        # 'roberta-base',
         #'t5-base',
         #'albert-base-v2',
     ]
-    vocab_sizes = [40000, 45000]#[i for i in range(5000, 15001, 1000)]
+    vocab_sizes = [1000, 5000, 10000, 20000, 30000, 50000, 70000, 100000]#[i for i in range(5000, 15001, 1000)]
     total_exp = (len(tokenizer_names) * len(vocab_sizes)) + (len(tokenizer_names))
     df_exp = pd.DataFrame(
         -1,
@@ -234,7 +235,7 @@ def run_vocabulary_experiment():
     df_idx = 0
     for name in tqdm(tokenizer_names):
 
-        if name in ['BPE', 'WordPiece', 'SentencePiece', 'roberta-base', 'bert-base-uncased', 't5-base']:
+        if name in ['BPE', 'WordPiece', 'SentencePiece', 'roberta-base', 'bert-base-uncased', 't5-base', 'ByteLevelBPE']:
 
             for vocab_size in vocab_sizes:
                 df_idx += 1
