@@ -126,47 +126,13 @@ def get_random_examples(list_in, size):
 
 def score_tokenizer_output(tok_in):
     
-    ref_dict = {
-        'cooking': {
-            'parts': ['cook', 'ing']
-        },
-        'dangerous': {
-            'parts': ['danger', 'ous']
-        },
-        'pretext': {
-            'parts': ['pre', 'text']
-        },
-        'fitness': {
-            'parts': ['fit', 'ness']
-        },
-        'antisocial': {
-            'parts': ['anti', 'social']
-        },
-        'podium': {
-            'parts': ['pod', 'ium']
-        },
-        'universe': {
-            'parts': ['uni', 'verse']
-        },
-        'european': {
-            'parts': ['europ', 'ean']
-        },
-        'decode': {
-            'parts': ['de', 'code']
-        },
-        'subvert': {
-            'parts': ['sub', 'vert']
-        },
-        'proactive': {
-            'parts': ['pro', 'active']
-        },
-        'concentric': {
-            'parts': ['con', 'centr', 'ic']
-        },
-        'octopus': {
-            'parts': ['octo', 'pus']
-        },  
-    }
+    with open('ref_words.json', 'r') as f:
+        ref_dict = json.load(f)
+        
+    #
+    max_score = 0
+    for w_ in ref_dict:
+        max_score += len(ref_dict[w_]['parts'])
     
     #
     score = 0
@@ -174,16 +140,25 @@ def score_tokenizer_output(tok_in):
         toked = tok_in.tokenize(word)
         #
         if (len(toked) == 1) or (len(toked) == len(word)):
-            score -= 1
+            score -= 0
         else:
             for t_ in toked:
+                t_ = t_.replace('#', '')
+                t_ = t_.replace('_', '')
                 if t_ in ref_dict[word]['parts']:
                     score += 1
+    #
+    score = score / max_score
     
     return score
 
 
 def run_vocabulary_experiment():
+    
+    #
+    path_data = './../unconstrained_language_12May2023'
+    path_save_dir = './Tokenizer_files_unconstrained_data'
+    path_res = 'Vocabulary_experiment_results_unconstrained.csv'
     
     # read pre-training data
     """
@@ -191,7 +166,6 @@ def run_vocabulary_experiment():
         data = json.load(f)
     """
     print(f"\nReading data...")
-    path_data = './../pretraining_data_free_text_08Jan2022'
     print(f"Reading data from {path_data}")
     data = load_from_disk(path_data)
     print("DONE!")
@@ -212,7 +186,7 @@ def run_vocabulary_experiment():
         #'t5-base',
         #'albert-base-v2',
     ]
-    vocab_sizes = [40000, 45000]#[i for i in range(5000, 15001, 1000)]
+    vocab_sizes = [30000, 31000, 32000]#, 36000, 37000, 38000, 39000]#[i for i in range(5000, 15001, 1000)]
     total_exp = (len(tokenizer_names) * len(vocab_sizes)) + (len(tokenizer_names))
     df_exp = pd.DataFrame(
         -1,
@@ -225,7 +199,7 @@ def run_vocabulary_experiment():
     iterator = get_iterator(data)
     print("DONE!")
     print(f"\nSampling examples for evaluation...")
-    sampled_examples = get_random_examples(iterator, 5000)
+    sampled_examples = get_random_examples(iterator, 10000)
     print("DONE!")
     
 
@@ -262,10 +236,10 @@ def run_vocabulary_experiment():
                 
                 #
                 #if vocab_size == 12000:
-                if not os.path.exists(os.path.join('./Tokenizer_files_free_text', f'{name}_{vocab_size}')):
-                    os.makedirs(os.path.join('./Tokenizer_files_free_text', f'{name}_{vocab_size}'))
+                if not os.path.exists(os.path.join(path_save_dir, f'{name}_{vocab_size}')):
+                    os.makedirs(os.path.join(path_save_dir, f'{name}_{vocab_size}'))
 
-                dir_save = os.path.join('./Tokenizer_files_free_text', f'{name}_{vocab_size}')
+                dir_save = os.path.join(path_save_dir, f'{name}_{vocab_size}')
                 try:
                     tokenizer[f'{name}_{vocab_size}'].save_pretrained(dir_save)
                     print('save_pretrain')
@@ -307,7 +281,7 @@ def run_vocabulary_experiment():
             #    df_exp.loc[df_idx, subset] = unk_count[subset]
             
         # save data
-        df_exp.to_csv('Vocabulary_experiment_results_free_text_08Jan23_2.csv')
+        df_exp.to_csv(path_res)
     
     return
 

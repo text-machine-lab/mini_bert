@@ -16,7 +16,7 @@ from tqdm.auto import tqdm
 from LMTrainerNew import LMTrainer
 import time
 import json
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
 """
 logger = logging.getLogger(__file__)
@@ -196,13 +196,13 @@ def parse_args():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=64,
+        default=128,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
         "--eval_batch_size",
         type=int,
-        default=64,
+        default=256,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
@@ -214,7 +214,7 @@ def parse_args():
     parser.add_argument(
         "--learning_rate",
         type=float,
-        default=0.0005,
+        default=0.0001,
         help="highest learning rate value.",
     )
     parser.add_argument(
@@ -266,14 +266,14 @@ def parse_args():
     parser.add_argument(
         "--grad_acc_steps",
         type=int,
-        default=4,
+        default=2,
         help="Accumulate gradient for these many steps",
     )
     
     parser.add_argument(
         "--eval_every_steps",
         type=int,
-        default=4000,
+        default=2000,
         help="Perform evaluation every n network updates.",
     )
     
@@ -419,6 +419,7 @@ def one_run(
     
     #
     wandb.finish()
+    torch.cuda.empty_cache()
     #logger.info(f"***** FINSHED TRAINING AND EVAL *****")
     
     #
@@ -430,14 +431,14 @@ def start_experiment():
     
     #
     timestamp_ = int(time.time())
-    date = "14Jan2023"
+    date = "09May2023"
     
     #
     features_to_vary = {
         #'embedding_size': [16, 8],
-        #'hidden_size': [32, 16, 8],
-        #'num_hidden_layers': [2, 1],#[4, 2, 1],
-        'intermediate_size': [128, 64, 32],
+        #'hidden_size': [256, 512, 768, 1024],
+        'num_hidden_layers': [10],# 12],
+        #'intermediate_size': [128, 64, 32],
         #'num_attention_heads': [4, 2, 1],
     }
     total_runs = sum([features_to_vary[k_].__len__() for k_ in features_to_vary])
@@ -483,9 +484,9 @@ def start_experiment():
             
             #
             input_config = {
-                "embedding_size": 64,
-                "hidden_size": 64,
-                "intermediate_size": 256,
+                "embedding_size": 512,
+                "hidden_size": 512,
+                "intermediate_size": 2048,
                 "num_attention_heads": 8,
                 "num_hidden_layers": 8,
             }
@@ -532,7 +533,7 @@ def start_experiment():
                     os.path.join(
                         ".",
                         "CSV files with experiment results",
-                        f"ModelConfig_{date}",
+                        f"09May2023",
                         f"experiment_results_test_{timestamp_}_{feature}.csv"
                     )
                 )
@@ -540,7 +541,7 @@ def start_experiment():
                     os.path.join(
                         ".",
                         "CSV files with experiment results",
-                        f"ModelConfig_{date}",
+                        f"09May2023",
                         f"experiment_results_eval_{timestamp_}_{feature}.csv"
                     )
                 )

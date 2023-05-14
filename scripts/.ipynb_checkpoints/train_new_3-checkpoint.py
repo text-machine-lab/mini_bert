@@ -16,7 +16,7 @@ from tqdm.auto import tqdm
 from LMTrainerNew import LMTrainer
 import time
 import json
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 """
 logger = logging.getLogger(__file__)
@@ -81,7 +81,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_path",
         type=str,
-        default="./pretraining_data_01Jan2022",
+        default="./unconstrained_language_12May2023_corrected",#"./pretraining_data_01Jan2022",
         help="path to raw dataset",
     )
     parser.add_argument(
@@ -108,7 +108,7 @@ def parse_args():
     parser.add_argument(
         "--tokenizer_path",
         type=str,
-        default="./tokenizer_selection_scripts/Tokenizer_files/roberta-base_19000",#"./tokenizer_selection_scripts/Tokenizer_files_free_text/roberta-base_40000",
+        default="./tokenizer_selection_scripts/Tokenizer_files_unconstrained_data/roberta-base_31000",#"./tokenizer_selection_scripts/Tokenizer_files/roberta-base_19000",#"./tokenizer_selection_scripts/Tokenizer_files_free_text/roberta-base_40000",
         help="path to tokenizer.  If not provided, default BERT tokenizer will be used.",
     )
 
@@ -196,7 +196,7 @@ def parse_args():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=256,
+        default=128,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
@@ -266,14 +266,14 @@ def parse_args():
     parser.add_argument(
         "--grad_acc_steps",
         type=int,
-        default=1,
+        default=2,
         help="Accumulate gradient for these many steps",
     )
     
     parser.add_argument(
         "--eval_every_steps",
         type=int,
-        default=1000,
+        default=2000,
         help="Perform evaluation every n network updates.",
     )
     
@@ -419,6 +419,7 @@ def one_run(
     
     #
     wandb.finish()
+    torch.cuda.empty_cache()
     #logger.info(f"***** FINSHED TRAINING AND EVAL *****")
     
     #
@@ -430,15 +431,15 @@ def start_experiment():
     
     #
     timestamp_ = int(time.time())
-    date = "14Jan2023"
+    date = "10May2023"
     
     #
     features_to_vary = {
-        'hidden_size': [32, 16, 8, 4],
-        #'num_hidden_layers': [4, 2, 1],
-        'embedding_size': [16, 8, 4],
-        #'intermediate_size': [128, 64, 32],
-        #'num_attention_heads': [2, 1],
+        #'embedding_size': [16, 8],
+        #'hidden_size': [128, 64],
+        'num_hidden_layers': [2, 1],
+        #'intermediate_size': [128, 64],
+        #'num_attention_heads': [4, 2, 1],
     }
     total_runs = sum([features_to_vary[k_].__len__() for k_ in features_to_vary])
     
@@ -486,8 +487,8 @@ def start_experiment():
                 "embedding_size": 32,
                 "hidden_size": 32,
                 "intermediate_size": 128,
-                "num_attention_heads": 4,
-                "num_hidden_layers": 4,
+                "num_attention_heads": 2,
+                "num_hidden_layers": 2,
             }
             input_config[feature] = feature_val
             input_config["tags"] = [feature, "ModelConfig"]
@@ -532,7 +533,7 @@ def start_experiment():
                     os.path.join(
                         ".",
                         "CSV files with experiment results",
-                        f"ModelConfig_{date}",
+                        f"09May2023",
                         f"experiment_results_test_{timestamp_}_{feature}.csv"
                     )
                 )
@@ -540,7 +541,7 @@ def start_experiment():
                     os.path.join(
                         ".",
                         "CSV files with experiment results",
-                        f"ModelConfig_{date}",
+                        f"09May2023",
                         f"experiment_results_eval_{timestamp_}_{feature}.csv"
                     )
                 )

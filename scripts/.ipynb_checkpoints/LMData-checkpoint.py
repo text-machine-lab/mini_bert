@@ -27,7 +27,7 @@ class LMDataset(Dataset):
         except:
             self.data = list_data['text']
         if debug:
-            self.data = self.data[:100]
+            self.data = self.data[:1000]
         
         #
         self.tokenizer = tokenizer
