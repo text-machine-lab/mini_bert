@@ -7,7 +7,7 @@ In this repository, we present the pre-training data and codebase used in our st
 1. Smaller models start showing pre-training benefits earlier if simplified language data (smaller vocabulary) is used to train the models.
 2. In the downscaled setting, 
     - we observe a break in the power curve between FLOPs and Evaluation Loss (`can add figure 1`)
-    - compute-optimality is not crucial
+    - compute-optimality is not crucial for NLU capabilities
     - pure parameter is count is not predictive of the pre-training performance
 
 
