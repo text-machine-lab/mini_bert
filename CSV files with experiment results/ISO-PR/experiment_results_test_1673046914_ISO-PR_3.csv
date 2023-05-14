@@ -1,4 +1,0 @@
-,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
-0,-1,256,128,128,4,4,4900864,2900546,7801410,6.755660331361883,1.9103807210922241,graceful-serenity-6
-1,-1,256,128,512,8,1,4900864,2700482,7601346,8.76584494078167,2.170862913131714,colorful-donkey-7
-2,-1,128,128,256,1,2,2450432,2750786,5201218,7.5337646814671535,2.019394874572754,fresh-wildflower-10

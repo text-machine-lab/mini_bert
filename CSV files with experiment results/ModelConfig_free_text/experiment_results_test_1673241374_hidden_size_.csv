@@ -1,4 +1,0 @@
-,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
-0,-1,256,32,1024,8,8,10276864,1897290,12174154,21.285585967063902,3.058030128479004,proud-blaze-1
-1,-1,256,64,1024,8,8,10276864,3813962,14090826,13.360095037208762,2.5922722816467285,denim-snow-5
-2,-1,256,128,1024,8,8,10276864,7850058,18126922,10.02586875902827,2.305168628692627,rosy-darkness-7

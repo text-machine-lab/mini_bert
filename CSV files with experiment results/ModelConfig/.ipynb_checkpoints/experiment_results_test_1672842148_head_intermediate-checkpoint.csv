@@ -1,7 +1,0 @@
-,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
-0,-1,256,256,256,8,8,4900864,3251522,8152386,5.4488672782603365,1.695407748222351,honest-fog-13
-1,-1,256,256,512,8,8,4900864,4302146,9203010,5.116505470035173,1.6324716806411743,prime-pine-15
-2,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,
-3,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,
-4,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,
-5,-1,-1,-1,-1,-1,-1,-1,-1,-1,,,

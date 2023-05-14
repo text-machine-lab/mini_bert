@@ -1,5 +1,0 @@
-,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss
-0,-1,256,32,1024,8,8,612608,587682,1200290,19236.02496257538,9.864540100097656
-1,-1,256,64,1024,8,8,1225216,1215746,2440962,15451.731407347765,9.645476341247559
-2,-1,256,128,1024,8,8,2450432,2674626,5125058,17699.87652422112,9.781312942504883
-3,-1,-1,-1,-1,-1,-1,-1,-1,-1,,

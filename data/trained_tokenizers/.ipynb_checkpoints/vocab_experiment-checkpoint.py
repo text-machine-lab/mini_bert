@@ -161,11 +161,6 @@ def run_vocabulary_experiment():
     path_res = 'Vocabulary_experiment_results_unconstrained.csv'
     
     # read pre-training data
-    """
-    with open('./../../../../from_shala/vocabulary_analysis/data_filtration/Filtration_15Nov2022/ALL_FILTERED_DATA/processed_data.json', 'r') as f:
-        data = json.load(f)
-    """
-    print(f"\nReading data...")
     print(f"Reading data from {path_data}")
     data = load_from_disk(path_data)
     print("DONE!")
@@ -175,17 +170,20 @@ def run_vocabulary_experiment():
     
     #
     tokenizer_names = [
-        #'BPE',
-        #'WordPiece',
-        #'SentencePiece',
+        # 'BPE',
+        # 'WordPiece',
+        'SentencePiece',
+        # 'ByteLevelBPE',
         #'bert-base-uncased',
         #'phueb/BabyBERTa-1', 
         #'prajjwal1/bert-tiny', 
         #'distilbert-base-uncased', 
-        'roberta-base',
+        # 'roberta-base',
         #'t5-base',
         #'albert-base-v2',
     ]
+
+    #
     vocab_sizes = [30000, 31000, 32000]#, 36000, 37000, 38000, 39000]#[i for i in range(5000, 15001, 1000)]
     total_exp = (len(tokenizer_names) * len(vocab_sizes)) + (len(tokenizer_names))
     df_exp = pd.DataFrame(
@@ -208,7 +206,7 @@ def run_vocabulary_experiment():
     df_idx = 0
     for name in tqdm(tokenizer_names):
 
-        if name in ['BPE', 'WordPiece', 'SentencePiece', 'roberta-base', 'bert-base-uncased', 't5-base']:
+        if name in ['BPE', 'WordPiece', 'SentencePiece', 'roberta-base', 'bert-base-uncased', 't5-base', 'ByteLevelBPE']:
 
             for vocab_size in vocab_sizes:
                 df_idx += 1

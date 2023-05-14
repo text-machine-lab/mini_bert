@@ -1,9 +1,0 @@
-{
-    "twilight-wildflower-11": {
-        "embedding_size": 32,
-        "hidden_size": 256,
-        "intermediate_size": 1024,
-        "num_attention_heads": 8,
-        "num_hidden_layers": 8
-    }
-}

@@ -1,4 +1,0 @@
-,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
-0,-1,32,256,128,1,1,612608,5290946,5903554,10.386793712423932,2.3405351638793945,generous-mountain-25
-1,-1,32,128,128,1,1,612608,2573122,3185730,12.740455462978383,2.5447824001312256,silver-smoke-30
-2,-1,32,64,128,1,1,612608,1275650,1888258,17.016309199565026,2.834172248840332,blooming-cosmos-33

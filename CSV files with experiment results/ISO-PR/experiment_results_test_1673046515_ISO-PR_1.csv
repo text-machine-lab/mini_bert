@@ -1,4 +1,0 @@
-,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
-0,-1,64,128,128,2,8,1225216,3274306,4499522,7.0744498599680945,1.9564896821975708,earthy-vortex-3
-1,-1,64,128,512,8,4,1225216,3270722,4495938,6.831874929208225,1.9215991497039795,feasible-butterfly-9
-2,-1,128,256,1024,1,2,2450432,6564930,9015362,6.22029492252314,1.8278173208236694,lyric-plant-12

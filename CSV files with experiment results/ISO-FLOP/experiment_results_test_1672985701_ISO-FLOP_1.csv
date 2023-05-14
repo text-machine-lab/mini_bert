@@ -1,4 +1,0 @@
-,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
-0,-1,32,32,128,2,2,612608,654978,1267586,16.572500767412993,2.8077447414398193,devoted-capybara-3
-1,-1,32,32,256,2,1,612608,650594,1263202,21.58500958419808,3.0719990730285645,stellar-galaxy-5
-2,-1,64,128,1024,8,4,1225216,3797058,5022274,6.5683495280287,1.8822625875473022,wise-dew-6

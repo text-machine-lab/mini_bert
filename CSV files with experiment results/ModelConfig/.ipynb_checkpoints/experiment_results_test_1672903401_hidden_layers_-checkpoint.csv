@@ -1,2 +1,0 @@
-,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
-0,-1,256,256,1024,8,4,4900864,8177218,13078082,5.283720094886839,1.66463041305542,apricot-meadow-20

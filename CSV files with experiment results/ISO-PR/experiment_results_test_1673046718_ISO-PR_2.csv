@@ -1,4 +1,0 @@
-,run number,embedding_size,hidden_size,intermediate_size,num_attention_heads,num_hidden_layers,Embedding parameters,Non-embedding parameters,Total parameters,test/perplexity,test/loss,run_name
-0,-1,64,64,512,8,2,1225216,1410242,2635458,9.127427780290823,2.2112839221954346,laced-sun-4
-1,-1,64,64,1024,8,1,1225216,1393282,2618498,13.036925314083517,2.5677857398986816,silvery-pyramid-8
-2,-1,32,64,256,4,8,612608,1642050,2254658,8.897370019801674,2.185755729675293,misty-lake-11
