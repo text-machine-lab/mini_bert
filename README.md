@@ -1,28 +1,40 @@
-To run this script please first do pip install -e .
 
-Main folders:
-1. `./data_filtration_script`: this folder contains python scripts used for filtering various text corpora based on a vocabulary file
-2. `./tokenizer_selection_script`: this folder contains python scripts written for training tokenizers and measure various metrics based on the tokenized text. The experiments conducted to find best-suited tokenizer were conducted using these scripts.
-3. `./output_dir/honest-leaf-127`: this folder consists of the best performing model
-4. `./`: parent directory, consists of all pre-training and glue evaluation scripts
-    - the train_wnli.py script was initially used for fine tuning, but it has some issues.
-    - The run_glue.py script is now used for fine tuning.
-    - The data processing script prepares the raw data to the hugging face format we need.
-    - The train.py script uses a Lamdba scheduler and was used for the wandb sweeps.
-    - train_.py script has gradient accumulation and NOAM scheduler
+# Honey, I Shrunk the Language: Language Model Behavior at Reduced Scale
+In this repository, we present the pre-training data and codebase used in our study (LINK) presented at ACL 2023. We study effect of reduction in the vocabulary of the language on the pre-training and NLU performance of language models with less than 20 million parameters.
 
 
-Sample command for train.py
-`python3 train.py --beta2=0.95 --learning_rate=0.00005 --max_train_steps=10 --output_dir=output_dir --tokenizer_path=tokenizers/Sentence_13k --batch_size=10 --debug --dataset_path=data/formatted_data_new`
+## Important files
 
-Sample command for train_.py
-`python3 train_.py --dataset_path=./formatted_data_new --tokenizer_path=./tokenizer_selection_scripts/Tokenizer_files/roberta-base_17000 --device_index=0 --fixed_seed_val=2 --max_train_steps=2000 --warmup_percent=0.05 --batch_size=320 --grad_acc_steps=1 --beta2=0.95 --learning_rate=8 --weight_decay=0.1 --eval_every_steps=300 --logging_steps=1 --wandb_project=mini_bert_overfitting_check --save_checkpoint_evey_steps=3000`
-
-Sample command for run_glue.py
-`python3 run_glue_nofilter.py --model_name=output_dir/wobbly-shadow-5 --tokenizer=./tokenizer_selection_scripts/Tokenizer_files/roberta-base_17000 --task_name="qnli" --do_train --do_eval --max_seq_length=128 --per_gpu_train_batch_size=32 --learning_rate=2e-4 --weight_decay=0 --num_train_epochs=5 --output_dir="output_dir/QNLI" --report_to=wandb --overwrite_output_dir --eval_steps=100 --seed=0`
+1. `./data/vocabulary/AOChildes_word_frequency`: This file includes the vocabulary we focus on. The vocabulary is curated from the AOChildes (LINK) dataset which consists of transcripts of child-directed (younger than 6 years old) speech. We use this vocabulary to collect pre-training data for our experiments.
 
 
-The create_tokenizer script can be used to generate a tokenizer.
-sample script:
-`python3 create_tokenizer.py --vocab_size=13000 --load_dir=<path_to_training_vocab> --save_dir=<where_to_save_tokenizer>
-    --tokenizer_type=<roberta, byte_level, sentence_piece, if none of these, then defaults to BPE>`
+2. `./data/pretraining_data/constrained_language`: This directory consists of the pre-training data we used for our main experiments. All text sequences in the data are strictly restricted to the words contained in the pre-defined vocabulary `./data/vocabulary/AOChildes_word_frequency`. To curate the dataset, we filtered text sequences from five open text corpora namely, C4, BookCorpus, Wikipedia, Simplified-Wikipedia and Children's Book Test corpus. The dataset consists of $\approx$ 9 million training sequences ($\approx$ 1.1 billion tokens) and 100,000 validation and test sequences.
+
+3. `./data/pretraining_data/unconstrained_language`: This directory consists of text sequences that are not constrained by any vocabulary rule. We use this dataset for our supplementary experiments on unconstrained language data. The size of the dataset and the distribution over various copora are approximately matched to the constrained language data `./data/pretraining_data/constrained_language`. The validation and text splits of the data are kept exactly same as in `./data/pretraining_data/constrained_language`, for comparability.
+
+
+## Installation and Training Models
+
+For replicating our experiments, please run following commands.
+
+1. Creating a vitual environment
+
+`conda create -n mini_bert python=3.7`
+`conda activate mini_bert`
+`pip install -editable ./`
+
+
+2. Pre-training models
+
+Here, in addition to the regular hyperparameters, the users have flexibility of selecting configuration hyperparameters of their choice. Particulary, we have functionality to set embedding dimension, hidden dimension in the transformer block, the intermediate dimension of the ffn in the transformer block, and number of layers of transformer block. We provide a sample pre-training initialization command,
+
+`enter command here`
+
+Furthermore, the functins `vary_configuration()` and `train_a_set_of_configurations()` in the `start_pretraining.py` file can be used to train a set of different model configurations sequentially.
+
+
+2. Fine-tuning models
+
+For measuring NLU capabilities we fine-tune the pre-trained models on GLUE tasks. We adpat the `run_glue.py` script provided by Huggingface (at https://github.com/huggingface/transformers/blob/main/examples/pytorch/text-classification/run_glue.py) to our experimental setting. We add one argument `--filter_glue` to the original script in order accomodate fine-tuning on both constrained and unconstrained version of the GLUE datasets. We provide a sample fine-tuning initialization command,
+
+`enter command here`
