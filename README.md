@@ -27,9 +27,11 @@ For replicating our experiments, please run following commands.
 
 1. Creating a vitual environment
 
-`conda create -n mini_bert python=3.7`
-`conda activate mini_bert`
-`pip install -editable ./`
+```
+conda create -n mini_bert python=3.7
+conda activate mini_bert
+pip install -editable ./
+```
 
 
 2. Pre-training models
