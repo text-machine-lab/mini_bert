@@ -2,8 +2,16 @@
 # Honey, I Shrunk the Language: Language Model Behavior at Reduced Scale
 In this repository, we present the pre-training data and codebase used in our study (LINK) presented at ACL 2023. We study effect of reduction in the vocabulary of the language on the pre-training and NLU performance of language models with less than 20 million parameters.
 
+## Key Findings
 
-## Important files
+1. Smaller models start showing pre-training benefits earlier if simplified language data (smaller vocabulary) is used to train the models.
+2. In the downscaled setting, 
+    - we observe a break in the power curve between FLOPs and Evaluation Loss
+    - compute-optimality is not crucial
+    - pure parameter is count is not predictive of the pre-training performance
+
+
+## Important Files
 
 1. `./data/vocabulary/AOChildes_word_frequency`: This file includes the vocabulary we focus on. The vocabulary is curated from the AOChildes (LINK) dataset which consists of transcripts of child-directed (younger than 6 years old) speech. We use this vocabulary to collect pre-training data for our experiments.
 
