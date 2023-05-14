@@ -38,7 +38,10 @@ pip install -editable ./
 
 Here, in addition to the regular hyperparameters, the users have flexibility of selecting configuration hyperparameters of their choice. Particulary, we have functionality to set embedding dimension, hidden dimension in the transformer block, the intermediate dimension of the ffn in the transformer block, and number of layers of transformer block. We provide a sample pre-training initialization command,
 
-`enter command here`
+```
+enter command here
+
+```
 
 Furthermore, the functins `vary_configuration()` and `train_a_set_of_configurations()` in the `start_pretraining.py` file can be used to train a set of different model configurations sequentially.
 
@@ -47,4 +50,6 @@ Furthermore, the functins `vary_configuration()` and `train_a_set_of_configurati
 
 For measuring NLU capabilities we fine-tune the pre-trained models on GLUE tasks. We adpat the `run_glue.py` script provided by Huggingface (at https://github.com/huggingface/transformers/blob/main/examples/pytorch/text-classification/run_glue.py) to our experimental setting. We add one argument `--filter_glue` to the original script in order accomodate fine-tuning on both constrained and unconstrained version of the GLUE datasets. We provide a sample fine-tuning initialization command,
 
-`enter command here`
+```
+enter command here
+```
