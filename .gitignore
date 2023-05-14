@@ -3,3 +3,4 @@ trained_models/
 *.egg-info/
 wandb/
 __pycache__/
+commands.txt
