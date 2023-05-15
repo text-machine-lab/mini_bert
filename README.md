@@ -39,11 +39,11 @@ pip install -editable ./
 Here, in addition to the regular hyperparameters, the users have flexibility of selecting configuration hyperparameters of their choice. Particulary, we have functionality to set embedding dimension, hidden dimension in the transformer block, the intermediate dimension of the ffn in the transformer block, and number of layers of transformer block. We provide a sample pre-training initialization command,
 
 ```
-enter command here
+python scripts/start_pretraining.py --dataset_path="./data/pretraining_data/unconstrained_language" --tokenizer_path="./data/trained_tokenizers/tokenizer_files_unconstrained_language/roberta-base_31000" --masked_percent=0.10 --embedding_size=32 --hidden_size=32 --intermediate_size=32 --num_attention_heads=4 --num_hidden_layers=2 --batch_size=16 --eval_batch_size=16 --learning_rate=0.0001 --warmup_percent=0.05 --weight_decay=0.01 --beta1=0.9 --beta2=0.95 --num_train_epochs=1 --grad_acc_steps=8 --eval_every_steps=8000 --save_random_model=8000 --wandb_project="mini_bert_ACL_debug"
 
 ```
 
-Furthermore, the functins `vary_configuration()` and `train_a_set_of_configurations()` in the `start_pretraining.py` file can be used to train a set of different model configurations sequentially.
+The functins `vary_configuration()` and `train_a_set_of_configurations()` in the `start_pretraining.py` file can be used to train a set of different model configurations sequentially. Furthermore, please note that in our experiments we utilized tokenizer at `./data/trained_tokenizers/tokenizer_files_constrained_language/roberta-base_19000` for our main experiments with the constrained language data and `./data/trained_tokenizers/tokenizer_files_unconstrained_language/roberta-base_31000` for the supplementary experiments with the unconstrained language data.
 
 
 2. Fine-tuning models

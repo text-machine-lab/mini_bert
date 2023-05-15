@@ -5,7 +5,7 @@ with open("requirements.txt") as f:
 
 
 setup(
-    name="ShrunkLanModels",
+    name="mini_bert",
     version="1.0",
     install_requires=install_requires,
     packages=['data', 'output_dir', 'notebooks', 'scripts', 'results']
