@@ -9,8 +9,7 @@ In this repository, we present the pre-training data and codebase used in our st
      alt="Break in the power law" 
      title="Break in the power law"
      width="50%" 
-     height="50%"
->
+     height="50%">
 
 1. Smaller models start showing pre-training benefits earlier if simplified language data (smaller vocabulary) is used to train the models.
 2. In the downscaled setting, 
