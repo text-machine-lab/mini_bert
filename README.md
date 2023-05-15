@@ -4,12 +4,14 @@ In this repository, we present the pre-training data and codebase used in our st
 
 ## Key Findings
 
-<img 
-     src="/results/ForACL/_ForACL_FLOPS Hoffman total_vs_eval-loss_w_power_curve_.png" 
-     alt="Break in the power law" 
-     title="Break in the power law"
-     width="50%" 
-     height="50%">
+<p align="center">
+    <img 
+         src="/results/ForACL/_ForACL_FLOPS Hoffman total_vs_eval-loss_w_power_curve_.png" 
+         alt="Break in the power law" 
+         title="Break in the power law"
+         width="50%" 
+         height="50%">
+</p>
 
 1. Smaller models start showing pre-training benefits earlier if simplified language data (smaller vocabulary) is used to train the models.
 2. In the downscaled setting, 
