@@ -13,7 +13,7 @@ In this repository, we present the pre-training data and codebase used in our st
 
 ## Important Files
 
-1. `./data/vocabulary/AOChildes_word_frequency`: This file includes the vocabulary we focus on. The vocabulary is curated from the AOChildes (LINK) dataset which consists of transcripts of child-directed (younger than 6 years old) speech. We use this vocabulary to collect pre-training data for our experiments.
+1. `./data/vocabulary/AOChildes_word_frequency`: This file includes the vocabulary we focus on. The vocabulary is curated from the AOChildes (https://github.com/UIUCLearningLanguageLab/AOCHILDES) dataset which consists of transcripts of child-directed speech. We use this vocabulary to collect pre-training data for our experiments.
 
 
 2. `./data/pretraining_data/constrained_language`: This directory consists of the pre-training data we used for our main experiments. All text sequences in the data are strictly restricted to the words contained in the pre-defined vocabulary `./data/vocabulary/AOChildes_word_frequency`. To curate the dataset, we filtered text sequences from five open text corpora namely, C4, BookCorpus, Wikipedia, Simplified-Wikipedia and Children's Book Test corpus. The dataset consists of $\approx$ 9 million training sequences ($\approx$ 1.1 billion tokens) and 100,000 sequences for each, validation and test split.
