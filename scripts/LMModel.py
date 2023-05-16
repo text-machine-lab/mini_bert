@@ -203,7 +203,7 @@ def load_model_for_finetuning(
     """
     
     # load weights
-    path_read = f'./../output_dir/{run_name}/best_model'
+    path_read = f'./output_dir/{run_name}/best_model'
     encoder = encoder.from_pretrained(path_read)
     config.model = encoder
     
