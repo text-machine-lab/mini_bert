@@ -198,14 +198,8 @@ class LMTrainer():
     ):
         # define dataloader
         print('Reading data...')
-        if not args.use_wiki_data:
-            data_raw = load_from_disk(args.dataset_path)
-        else:
-            data_raw = self.load_wiki_data()        
-        print('Reading done.')
-        
-        #
-        
+        data_raw = load_from_disk(args.dataset_path)       
+        print('Reading done.')        
 
         # 
         print('\nCreating dataloaders...')
@@ -215,7 +209,6 @@ class LMTrainer():
             mlm_probability=args.masked_percent,
             max_seq_len=args.max_seq_length,
             batch_size=args.batch_size,
-            validation_size=args.validation_size,
             fixed_seed_val=args.fixed_seed_val,
             debug=args.debug,
             args=args,

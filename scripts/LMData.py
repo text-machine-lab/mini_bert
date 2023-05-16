@@ -69,7 +69,6 @@ class LMDataloader():
         mlm_probability,
         max_seq_len,
         batch_size=8,
-        validation_size=0.02,
         fixed_seed_val=0,
         debug=False,
         args=None,
@@ -103,7 +102,6 @@ class LMDataloader():
         5. create dataloader
         - create dataloader for each data split
         
-        
         ==================
         
         INPUT: 
@@ -112,7 +110,6 @@ class LMDataloader():
             - mlm_probability: how much to mask?
             - max_seq_len: maximum sequence length?
             - batch_size: batch size in the dataloader
-            - validation_size: size of the validation split of the data
             - fixed_seed_val: seed value
             - debug: only takes 10 data instances if true
         
@@ -129,6 +126,18 @@ class LMDataloader():
         NOTE: 
         - use the function 'check_dataloader' to check if dataloader is correct
         
+        - Default collation object (defined above) matches the masking adopted in BERT
+        i.e., 
+        15% masking, 
+        80% of the words selected for masking are replaced by  <mask>
+        10% of the words selected for masking are kept the same
+        10% of the words selected for masking are replaced by a random word
+        And, we do not have control over (80, 10, 10).
+        
+        The custom collation function defined in this class simplifies the masking 
+        and implements 15% masking with (100, 0, 0).
+        
+        
         """
         
         #
@@ -137,19 +146,6 @@ class LMDataloader():
         self.fixed_seed_val = fixed_seed_val
         self.max_seq_len = max_seq_len
         self.mlm_probability = mlm_probability
-        
-        # covert dictionary of sentences into a list of grouped sentences
-        #list_data = self.group_sentences(
-        #    dict_data=dict_data,
-        #    max_len=max_seq_len,
-        #)
-        
-        # split the data
-        #train, val = self.split_data(
-        #    list_data=list_data,
-        #    validation_size=validation_size,
-        #    fixed_seed_val=fixed_seed_val,
-        #)
         
         # convert into dataset format
         self.dataset = {}
@@ -174,19 +170,6 @@ class LMDataloader():
         )
         
         #
-        """
-        NOTE: Default collation object (defined above) matches the masking adopted in BERT
-        i.e., 
-        15% masking, 
-        80% of the words selected for masking are replaced by  <mask>
-        10% of the words selected for masking are kept the same
-        10% of the words selected for masking are replaced by a random word
-        And, we do not have control over (80, 10, 10)
-        
-        The custom collation function defined in this class simplifies the masking
-        and implements 15% masking with (100, 0, 0).
-        
-        """
         self.dataloader = {}
         for split in ['train', 'validation', 'test']:#self.dataset:
             if (not split == 'train') and (not args == None):
