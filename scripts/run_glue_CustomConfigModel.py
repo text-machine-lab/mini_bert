@@ -435,7 +435,7 @@ def main():
     except:
         print(f"\nCould not load the default version of the RoBERTa model. Trying to load the CustomConfig now...")
         config, model = load_model_for_finetuning(
-            run_name=model_args.model_name_or_path.split('/')[-1],
+            run_name=model_args.model_name_or_path.split('/')[-],
             config_name=model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task=data_args.task_name,
