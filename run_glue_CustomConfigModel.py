@@ -728,7 +728,7 @@ def main():
         kwargs["language"] = "en"
         kwargs["dataset_tags"] = "super_glue"
         kwargs["dataset_args"] = data_args.task_name
-        kwargs["dataset"] = f"SuperGLUE {data_args.task_name.upper()}"
+        kwargs["dataset"] = f"SUPER_GLUE {data_args.task_name.upper()}"
 
     if training_args.push_to_hub:
         trainer.push_to_hub(**kwargs)
