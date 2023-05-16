@@ -58,7 +58,7 @@ pip install -editable ./
 Here, in addition to the regular hyperparameters, the users have flexibility of selecting configuration hyperparameters of their choice. Particulary, we have functionality to set embedding dimension, hidden dimension in the transformer block, the intermediate dimension of the ffn in the transformer block, and number of layers of transformer block. We provide a sample pre-training initialization command,
 
 ```
-python scripts/start_pretraining.py --dataset_path="./data/pretraining_data/unconstrained_language" --tokenizer_path="./data/trained_tokenizers/tokenizer_files_unconstrained_language/roberta-base_31000" --masked_percent=0.10 --embedding_size=32 --hidden_size=32 --intermediate_size=32 --num_attention_heads=4 --num_hidden_layers=2 --batch_size=16 --eval_batch_size=16 --learning_rate=0.0001 --warmup_percent=0.05 --weight_decay=0.01 --beta1=0.9 --beta2=0.95 --num_train_epochs=1 --grad_acc_steps=8 --eval_every_steps=8000 --save_random_model=8000 --wandb_project="mini_bert_ACL_debug"
+python scripts/start_pretraining.py --dataset_path="./data/pretraining_data/unconstrained_language" --tokenizer_path="./data/trained_tokenizers/tokenizer_files_unconstrained_language/roberta-base_31000" --masked_percent=0.15 --embedding_size=32 --hidden_size=32 --intermediate_size=32 --num_attention_heads=2 --num_hidden_layers=2 --batch_size=16 --eval_batch_size=16 --learning_rate=0.0005 --warmup_percent=0.05 --weight_decay=0.01 --beta1=0.9 --beta2=0.95 --num_train_epochs=1 --grad_acc_steps=8 --eval_every_steps=8000 --save_random_model=8000 --wandb_project="pretraining_debug"
 
 ```
 
