@@ -1,0 +1,58 @@
+{
+  "cosmic-salad-130": {
+    "run_name": "cosmic-salad-130",
+    "embedding_size": 256,
+    "hidden_size": 64,
+    "intermediate_size": 1024,
+    "num_attention_heads": 8,
+    "num_hidden_layers": 8
+  },
+  "giddy-planet-101": {
+    "run_name": "clean-sky-2",
+    "embedding_size": 256,
+    "hidden_size": 256,
+    "intermediate_size": 1024,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 8
+  },
+  "clean-sky-2": {
+    "run_name": "clean-sky-2",
+    "embedding_size": 256,
+    "hidden_size": 256,
+    "intermediate_size": 1024,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 8
+  },
+  "clean-sky-2": {
+    "run_name": "clean-sky-2",
+    "embedding_size": 256,
+    "hidden_size": 256,
+    "intermediate_size": 1024,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 8
+  },
+  "clean-sky-2": {
+    "run_name": "clean-sky-2",
+    "embedding_size": 256,
+    "hidden_size": 256,
+    "intermediate_size": 1024,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 8
+  },
+  "clean-sky-2": {
+    "run_name": "clean-sky-2",
+    "embedding_size": 256,
+    "hidden_size": 256,
+    "intermediate_size": 1024,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 8
+  },
+  "clean-sky-2": {
+    "run_name": "clean-sky-2",
+    "embedding_size": 256,
+    "hidden_size": 256,
+    "intermediate_size": 1024,
+    "num_attention_heads": 1,
+    "num_hidden_layers": 8
+  }
+}
