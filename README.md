@@ -23,11 +23,9 @@ In this repository, we present the pre-training data and codebase used in our st
          height="50%">
 </p>
 
-1. Smaller models start showing pre-training benefits earlier if simplified language data (smaller vocabulary) is used to train the models.
-2. In the downscaled setting, 
-    - we observe a break in the power curve between FLOPs and Evaluation Loss (`can add figure 1`)
-    - compute-optimality is not crucial for NLU capabilities
-    - pure parameter is count is not predictive of the pre-training performance
+1. When problem size is reduced (i.e. language is simplified), benefits of pre-training are observed at drastically reduced scale.
+2. Addition of layers does not consistently improve downstream performance.
+3. Scaling laws and compute-optimality do not play an important role for downstream performance at this scale.
 
 
 ## Important Files
@@ -35,9 +33,13 @@ In this repository, we present the pre-training data and codebase used in our st
 1. `./data/vocabulary/AOChildes_word_frequency`: This file includes the vocabulary we focus on. The vocabulary is curated from the AOChildes (https://github.com/UIUCLearningLanguageLab/AOCHILDES) dataset which consists of transcripts of child-directed speech. We use this vocabulary to collect pre-training data for our experiments.
 
 
-2. `./data/pretraining_data/constrained_language`: This directory consists of the pre-training data we used for our main experiments. All text sequences in the data are strictly restricted to the words contained in the pre-defined vocabulary `./data/vocabulary/AOChildes_word_frequency`. To curate the dataset, we filtered text sequences from five open text corpora namely, C4, BookCorpus, Wikipedia, Simplified-Wikipedia and Children's Book Test corpus. The dataset consists of $\approx$ 9 million training sequences ($\approx$ 1.1 billion tokens) and 100,000 sequences for each, validation and test split.
+2. Pre-training data
 
-3. `./data/pretraining_data/unconstrained_language`: This directory consists of text sequences that are not constrained by any vocabulary rule. We use this dataset for our supplementary experiments on unconstrained language data. The size of the dataset and the distribution over various copora are approximately matched to the constrained language data `./data/pretraining_data/constrained_language`. The validation and text splits of the data are kept exactly same as in `./data/pretraining_data/constrained_language`, for comparability.
+    - Constrained language (simplified language):
+This data is the pre-training data we used for our main experiments, publicly available at https://huggingface.co/datasets/text-machine-lab/constrained_language. All text sequences in the data are strictly restricted to the words contained in the pre-defined vocabulary `./data/vocabulary/AOChildes_word_frequency`. To curate the dataset, we filtered text sequences from five open text corpora namely, C4, BookCorpus, Wikipedia, Simplified-Wikipedia and Children's Book Test corpus. The dataset consists of $\approx$ 9 million training sequences ($\approx$ 1.1 billion tokens) and 100,000 sequences for each, validation and test split.
+
+    - Unconstrained language:
+This data consists of text sequences that are not constrained by any vocabulary rule, publicly available at https://huggingface.co/datasets/text-machine-lab/unconstrained_language. We use this dataset for our supplementary experiments on unconstrained language data. The size of the dataset and the distribution over various copora are approximately matched to the constrained language data. The validation and text splits of the data are kept exactly same as in constrained language data, for comparability.
 
 
 ## Installation and Training Models
