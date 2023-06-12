@@ -64,13 +64,13 @@ python scripts/start_pretraining.py --dataset_path="./data/pretraining_data/unco
 
 ```
 
-The functins `vary_configuration()` and `train_a_set_of_configurations()` in the `start_pretraining.py` file can be used to train a set of different model configurations sequentially. Furthermore, please note that in our experiments we utilized tokenizer at `./data/trained_tokenizers/tokenizer_files_constrained_language/roberta-base_19000` for our main experiments with the constrained language data and `./data/trained_tokenizers/tokenizer_files_unconstrained_language/roberta-base_31000` for the supplementary experiments with the unconstrained language data.
+The functions `vary_configuration()` and `train_a_set_of_configurations()` in the `start_pretraining.py` file can be used to train a set of different model configurations sequentially. Furthermore, please note that in our experiments we utilized tokenizer at `./data/trained_tokenizers/tokenizer_files_constrained_language/roberta-base_19000` for our main experiments with the constrained language data and `./data/trained_tokenizers/tokenizer_files_unconstrained_language/roberta-base_31000` for the supplementary experiments with the unconstrained language data.
 
 
 2. Fine-tuning models
 
-For measuring NLU capabilities we fine-tune the pre-trained models on GLUE tasks. We adpat the `run_glue.py` script provided by Huggingface (at https://github.com/huggingface/transformers/blob/main/examples/pytorch/text-classification/run_glue.py) to our experimental setting. We add one argument `--filter_glue` to the original script in order accomodate fine-tuning on both constrained and unconstrained version of the GLUE datasets. We provide a sample fine-tuning initialization command,
+For measuring NLU capabilities we fine-tune the pre-trained models on GLUE tasks. We adpat the `run_glue.py` script provided by Huggingface (at https://github.com/huggingface/transformers/blob/main/examples/pytorch/text-classification/run_glue.py) to our experimental setting. We add one argument `--filter_glue` to the original script in order accomodate fine-tuning on both constrained and unconstrained version of the GLUE datasets. This filtering works by identifying GLUE examples that exclusively contain vocabulary specified in `./data/vocabulary/AOChildes_word_frequency`. We provide a sample fine-tuning initialization command,
 
 ```
-enter command here
+python3 scripts/run_glue_CustomConfigModel.py --model_name=output_dir/model_name/best_model --filter_glue=1 --tokenizer=./data/trained_tokenizers/tokenizer_files_u/roberta-base_29000 --task_name="cola" --do_train --do_eval --max_seq_length=128 --per_gpu_train_batch_size=32 --learning_rate=2e-4 --weight_decay=0 --num_train_epochs=5 --output_dir="output_dir/model_name_run_N" --report_to=wandb --overwrite_output_dir --eval_steps=100 --seed=0
 ```
