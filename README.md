@@ -10,7 +10,7 @@
 
 # Honey, I Shrunk the Language: Language Model Behavior at Reduced Scale
 
-In this repository, we present the pre-training data and codebase used in our study (LINK) presented at ACL 2023. We study effect of reduction in the vocabulary of the language on the pre-training and NLU performance of language models with less than 20 million parameters.
+In this repository, we present the pre-training data and codebase used in our study (https://arxiv.org/abs/2305.17266) presented at ACL 2023. We study effect of reduction in the vocabulary of the language on the pre-training and NLU performance of language models with less than 20 million parameters.
 
 ## Key Findings
 
